@@ -13,7 +13,7 @@ const CONFIG = {
   // Sign up at https://www.emailjs.com, then fill these in.
   // See SETUP.md → Part 3 for step-by-step instructions.
   EMAILJS_SERVICE_ID:  "diamondenclave",   // e.g. "service_xxxxxxx"
-  EMAILJS_TEMPLATE_ID: "maintenancebill",   // e.g. "template_xxxxxxx"
+  EMAILJS_TEMPLATE_ID: "template_7rpi1ts",   // e.g. "template_xxxxxxx"
   EMAILJS_PUBLIC_KEY:  "vSdCkNFabN9aUlHwG",   // e.g. "aBcDeFgHiJkLmNoPq"
 
   // ── GOOGLE SHEETS (optional — enables cross-device sync) ───
