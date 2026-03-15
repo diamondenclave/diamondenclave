@@ -12,7 +12,7 @@ const CONFIG = {
   // ── EMAILJS (free — 200 emails/month) ──────────────────────
   // Sign up at https://www.emailjs.com
   EMAILJS_SERVICE_ID:  "diamondenclave",   // e.g. "diamondenclave"
-  EMAILJS_TEMPLATE_ID: "appiCieQ3AijrHoUe",   // e.g. "template_xxxxxxx"
+  EMAILJS_TEMPLATE_ID: "template_so0o36k",   // e.g. "template_xxxxxxx"
   EMAILJS_PUBLIC_KEY:  "vSdCkNFabN9aUlHwG",   // e.g. "aBcDeFgHiJkLmNoPq"
 
   // ── AIRTABLE (free — cross-device data sync) ────────────────
