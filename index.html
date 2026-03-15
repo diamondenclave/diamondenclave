@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Diamond Enclave — Maintenance Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-diamond">◆</div>
+    <div class="header-text">
+      <h1 class="site-title">Diamond Enclave</h1>
+      <p class="site-subtitle">Maintenance Management Portal</p>
+    </div>
+    <div class="header-actions">
+      <div id="adminBadge" class="admin-badge hidden">
+        <span class="badge-dot"></span> Admin
+      </div>
+      <button id="adminLoginBtn" class="btn-outline" onclick="openAdminModal()">Admin Login</button>
+      <button id="adminLogoutBtn" class="btn-outline hidden" onclick="adminLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- SETUP BANNER -->
+  <div id="setupBanner" class="setup-banner hidden">
+    ⚙️ <strong>Google Sheets not configured.</strong> Please set your <code>SHEET_URL</code> in <code>config.js</code> to enable data sync.
+    <a href="SETUP.md" target="_blank">Setup Guide →</a>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- STATS ROW -->
+    <section class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotalFlats">9</div>
+        <div class="stat-label">Total Flats</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="stat-value" id="statPaid">—</div>
+        <div class="stat-label">Paid This Month</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-value" id="statPending">—</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-value" id="statCollected">—</div>
+        <div class="stat-label">Collected (₹)</div>
+      </div>
+    </section>
+
+    <!-- MONTH SELECTOR + EXPORT -->
+    <section class="controls-row">
+      <div class="month-nav">
+        <button class="nav-arrow" onclick="changeMonth(-1)">&#8592;</button>
+        <div class="month-display" id="monthDisplay">March 2026</div>
+        <button class="nav-arrow" onclick="changeMonth(1)">&#8594;</button>
+      </div>
+      <div class="control-buttons">
+        <button id="manageEmailsBtn" class="btn-outline hidden" onclick="openEmailsPanel()">✉ Manage Emails</button>
+        <button class="btn-primary" onclick="exportExcel()">⬇ Download Excel</button>
+      </div>
+    </section>
+
+    <!-- PAYMENT TABLE -->
+    <section class="table-section">
+      <div class="table-wrapper">
+        <table class="payment-table" id="paymentTable">
+          <thead>
+            <tr>
+              <th>Flat</th>
+              <th>Owner</th>
+              <th>Monthly Charge</th>
+              <th>Status</th>
+              <th>Payment Date</th>
+              <th id="emailHeader" class="hidden">Email</th>
+              <th id="actionHeader" class="hidden">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- YEARLY SUMMARY (accordion) -->
+    <section class="yearly-section">
+      <button class="yearly-toggle" onclick="toggleYearly()">
+        <span>📊 Yearly Summary View</span>
+        <span id="yearlyArrow">▼</span>
+      </button>
+      <div id="yearlyPanel" class="yearly-panel hidden">
+        <div id="yearlyContent"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ADMIN LOGIN MODAL -->
+  <div id="adminModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+    <div class="modal-box">
+      <div class="modal-diamond">◆</div>
+      <h2 class="modal-title">Admin Access</h2>
+      <p class="modal-sub">Enter the admin password to manage payments</p>
+      <input type="password" id="adminPasswordInput" class="modal-input" placeholder="Password"
+        onkeydown="if(event.key==='Enter') verifyAdmin()" />
+      <div id="adminError" class="modal-error hidden">Incorrect password. Try again.</div>
+      <div class="modal-buttons">
+        <button class="btn-primary" onclick="verifyAdmin()">Login</button>
+        <button class="btn-ghost" onclick="closeAdminModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM PAYMENT MODAL -->
+  <div id="paymentModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+    <div class="modal-box">
+      <div class="modal-diamond accent-diamond">◆</div>
+      <h2 class="modal-title" id="payModalTitle">Confirm Payment</h2>
+      <p class="modal-sub" id="payModalSub">Mark this flat as paid?</p>
+      <input type="date" id="paymentDateInput" class="modal-input" />
+      <div class="modal-buttons">
+        <button class="btn-primary" onclick="confirmPayment()">✓ Mark as Paid</button>
+        <button class="btn-ghost" onclick="closePaymentModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVOKE PAYMENT MODAL -->
+  <div id="revokeModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+    <div class="modal-box">
+      <div class="modal-diamond warn-diamond">◆</div>
+      <h2 class="modal-title">Revoke Payment?</h2>
+      <p class="modal-sub" id="revokeModalSub">This will mark the flat as unpaid.</p>
+      <div class="modal-buttons">
+        <button class="btn-warn" onclick="confirmRevoke()">Revoke</button>
+        <button class="btn-ghost" onclick="closeRevokeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANAGE EMAILS PANEL MODAL -->
+  <div id="emailsModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+    <div class="modal-box modal-box-wide">
+      <div class="modal-diamond">◆</div>
+      <h2 class="modal-title">Manage Owner Emails</h2>
+      <p class="modal-sub">Add or update email addresses for bill delivery</p>
+      <div id="emailFormList" class="email-form-list">
+        <!-- populated by JS -->
+      </div>
+      <div class="modal-buttons" style="margin-top:20px;">
+        <button class="btn-primary" onclick="saveEmails()">💾 Save All</button>
+        <button class="btn-ghost" onclick="closeEmailsPanel()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEND BILL MODAL -->
+  <div id="sendBillModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+    <div class="modal-box">
+      <div class="modal-diamond accent-diamond">✉</div>
+      <h2 class="modal-title" id="billModalTitle">Send Bill</h2>
+      <p class="modal-sub" id="billModalSub"></p>
+      <div id="billPreview" class="bill-preview"></div>
+      <div id="billEmailRow" class="bill-email-row">
+        <label class="modal-label">Recipient Email</label>
+        <input type="email" id="billEmailInput" class="modal-input" placeholder="owner@email.com" />
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-primary" onclick="confirmSendBill()">✉ Send Bill</button>
+        <button class="btn-ghost" onclick="closeSendBillModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT SEND MODAL (after marking paid) -->
+  <div id="receiptModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+    <div class="modal-box">
+      <div class="modal-diamond" style="color:var(--paid-text)">✓</div>
+      <h2 class="modal-title">Payment Recorded!</h2>
+      <p class="modal-sub" id="receiptModalSub">Send a payment receipt to the owner?</p>
+      <div id="receiptEmailRow">
+        <label class="modal-label">Send receipt to</label>
+        <input type="email" id="receiptEmailInput" class="modal-input" placeholder="owner@email.com" />
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-primary" onclick="confirmSendReceipt()">✉ Send Receipt</button>
+        <button class="btn-ghost" onclick="closeReceiptModal()">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- SCRIPTS -->
+  <script src="config.js"></script>
+  <script src="sheets.js"></script>
+  <script src="email.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
