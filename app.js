@@ -21,7 +21,7 @@ const MONTHS = [
 // ── Init ────────────────────────────────────────────────────
 (async function init() {
   const msgs = [];
-  if (!Sheets.isConfigured())               msgs.push("Google Sheets not connected (using local storage).");
+  if (!Sheets.isConfigured())               msgs.push("Airtable not connected — using local storage.");
   if (!EmailManager.isEmailConfigured())    msgs.push("EmailJS not configured — emails disabled.");
   if (msgs.length) {
     document.getElementById("bannerMsg").textContent = " " + msgs.join("  |  ") + "  ";

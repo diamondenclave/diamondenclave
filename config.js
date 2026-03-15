@@ -1,7 +1,7 @@
 // ============================================================
 //  DIAMOND ENCLAVE — Configuration
-//  Step 1: Fill in EMAILJS_* fields after signing up at emailjs.com
-//  Step 2 (optional later): Fill in SHEET_URL for cross-device data sync
+//  Fill in the fields below after completing setup.
+//  See SETUP.md for step-by-step instructions.
 // ============================================================
 
 const CONFIG = {
@@ -10,16 +10,17 @@ const CONFIG = {
   ADMIN_PASSWORD: "DEAdmin",
 
   // ── EMAILJS (free — 200 emails/month) ──────────────────────
-  // Sign up at https://www.emailjs.com, then fill these in.
-  // See SETUP.md → Part 3 for step-by-step instructions.
-  EMAILJS_SERVICE_ID:  "diamondenclave",   // e.g. "service_xxxxxxx"
-  EMAILJS_TEMPLATE_ID: "template_7rpi1ts",   // e.g. "template_xxxxxxx"
-  EMAILJS_PUBLIC_KEY:  "vSdCkNFabN9aUlHwG",   // e.g. "aBcDeFgHiJkLmNoPq"
+  // Sign up at https://www.emailjs.com
+  EMAILJS_SERVICE_ID:  "",   // e.g. "diamondenclave"
+  EMAILJS_TEMPLATE_ID: "",   // e.g. "template_xxxxxxx"
+  EMAILJS_PUBLIC_KEY:  "",   // e.g. "aBcDeFgHiJkLmNoPq"
 
-  // ── GOOGLE SHEETS (optional — enables cross-device sync) ───
-  // Leave blank to use localStorage (data stays on this device).
-  // Fill in later when Google Apps Script becomes available.
-  SHEET_URL: "",   // e.g. "https://script.google.com/macros/s/XXXX/exec"
+  // ── AIRTABLE (free — cross-device data sync) ────────────────
+  // Sign up at https://airtable.com, then fill these in.
+  // See SETUP.md → Part 3 for step-by-step instructions.
+  AIRTABLE_TOKEN:   "",   // e.g. "patXXXXXXXXXXXXXX.XXXXXXXX..."
+  AIRTABLE_BASE_ID: "",   // e.g. "appXXXXXXXXXXXXXX"
+  AIRTABLE_TABLE:   "Payments",   // keep this as-is unless you rename the table
 
   // ── FLATS DATA ─────────────────────────────────────────────
   FLATS: [
