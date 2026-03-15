@@ -20,7 +20,11 @@ const MONTHS = [
 
 // ── Init ────────────────────────────────────────────────────
 (async function init() {
-  if (!Sheets.isConfigured()) {
+  const msgs = [];
+  if (!Sheets.isConfigured())               msgs.push("Google Sheets not connected (using local storage).");
+  if (!EmailManager.isEmailConfigured())    msgs.push("EmailJS not configured — emails disabled.");
+  if (msgs.length) {
+    document.getElementById("bannerMsg").textContent = " " + msgs.join("  |  ") + "  ";
     document.getElementById("setupBanner").classList.remove("hidden");
   }
   await Sheets.loadAll();

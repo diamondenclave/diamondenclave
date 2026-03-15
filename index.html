@@ -29,7 +29,8 @@
 
   <!-- SETUP BANNER -->
   <div id="setupBanner" class="setup-banner hidden">
-    ⚙️ <strong>Google Sheets not configured.</strong> Please set your <code>SHEET_URL</code> in <code>config.js</code> to enable data sync.
+    ⚙️ <strong>Not fully configured.</strong>
+    <span id="bannerMsg"></span>
     <a href="SETUP.md" target="_blank">Setup Guide →</a>
   </div>
 
@@ -202,9 +203,16 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="config.js"></script>
   <script src="sheets.js"></script>
   <script src="email.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Initialise EmailJS once config is loaded
+    if (CONFIG.EMAILJS_PUBLIC_KEY && CONFIG.EMAILJS_PUBLIC_KEY.trim()) {
+      emailjs.init({ publicKey: CONFIG.EMAILJS_PUBLIC_KEY });
+    }
+  </script>
 </body>
 </html>
