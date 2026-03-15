@@ -11,15 +11,15 @@ const CONFIG = {
 
   // ── EMAILJS (free — 200 emails/month) ──────────────────────
   // Sign up at https://www.emailjs.com
-  EMAILJS_SERVICE_ID:  "",   // e.g. "diamondenclave"
-  EMAILJS_TEMPLATE_ID: "",   // e.g. "template_xxxxxxx"
-  EMAILJS_PUBLIC_KEY:  "",   // e.g. "aBcDeFgHiJkLmNoPq"
+  EMAILJS_SERVICE_ID:  "diamondenclave",   // e.g. "diamondenclave"
+  EMAILJS_TEMPLATE_ID: "maintenancebill",   // e.g. "template_xxxxxxx"
+  EMAILJS_PUBLIC_KEY:  "vSdCkNFabN9aUlHwG",   // e.g. "aBcDeFgHiJkLmNoPq"
 
   // ── AIRTABLE (free — cross-device data sync) ────────────────
   // Sign up at https://airtable.com, then fill these in.
   // See SETUP.md → Part 3 for step-by-step instructions.
-  AIRTABLE_TOKEN:   "",   // e.g. "patXXXXXXXXXXXXXX.XXXXXXXX..."
-  AIRTABLE_BASE_ID: "",   // e.g. "appXXXXXXXXXXXXXX"
+  AIRTABLE_TOKEN:   "patEKk5dOQ5Bz2FoJ.7879a3e1e993d8b8410b717962de69d476a99e8893fade7abe2d4801069ea5f4",   // e.g. "patXXXXXXXXXXXXXX.XXXXXXXX..."
+  AIRTABLE_BASE_ID: "appiCieQ3AijrHoUe",   // e.g. "appXXXXXXXXXXXXXX"
   AIRTABLE_TABLE:   "Payments",   // keep this as-is unless you rename the table
 
   // ── FLATS DATA ─────────────────────────────────────────────
