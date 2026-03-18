@@ -225,6 +225,8 @@ async function confirmPayment(){
   const fid =state.pendingFlat;
   await Sheets.markPaid(state.currentYear,state.currentMonth,fid,date,true,amt);
   closePaymentModal(); renderTable(); renderStats(); renderYearly();
+  // Refresh treasurer ledger if on that tab or always keep it in sync
+  if(typeof renderTreasurerTab==="function") renderTreasurerTab();
   const own=Sheets.getCurrentOwner(fid,state.currentYear,state.currentMonth);
   state.receiptFlat={flatId:fid,date,amount:amt};
   const flat=getFlatCfg(fid);
@@ -245,6 +247,7 @@ async function confirmRevoke(){
   if(!state.revokeFlat) return;
   await Sheets.markPaid(state.currentYear,state.currentMonth,state.revokeFlat,"",false,0);
   closeRevokeModal(); renderTable(); renderStats(); renderYearly();
+  if(typeof renderTreasurerTab==="function") renderTreasurerTab();
   showToast(`Payment revoked`);
 }
 
