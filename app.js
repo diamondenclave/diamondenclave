@@ -253,6 +253,8 @@ function openRevokeModal(flatId){
 function closeRevokeModal(){ document.getElementById("revokeModal").classList.add("hidden"); state.revokeFlat=null; }
 async function confirmRevoke(){
   if(!state.revokeFlat) return;
+  // Reload fresh data first so ledgerRef and ledger entries are current
+  if(Sheets.isConfigured()) await Sheets.loadAll();
   await Sheets.markPaid(state.currentYear,state.currentMonth,state.revokeFlat,"",false,0);
   closeRevokeModal(); renderTable(); renderStats(); renderYearly();
   if(typeof renderTreasurerTab==="function") renderTreasurerTab();

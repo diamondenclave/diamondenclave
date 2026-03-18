@@ -96,12 +96,22 @@ const Sheets = (() => {
     const MONTHS  = ["January","February","March","April","May","June",
                      "July","August","September","October","November","December"];
     const flatCfg = CONFIG.FLATS.find(f => f.id === flatId) || {};
+    const monthLabel = `${MONTHS[month-1]} ${year}`;
 
-    // ── Always delete any existing ledger entry for this flat+month first ──
-    // This handles both revoke AND re-mark scenarios cleanly
+    // ── Always delete any existing auto-ledger entry for this flat+month ──
+    // Strategy 1: use stored ledgerRef (fast, reliable when available)
     const existing = (_payments[mk]||{})[flatId];
     if (existing && existing.ledgerRef) {
       await deleteLedgerEntry(existing.ledgerRef);
+    } else {
+      // Strategy 2: scan ledger for matching auto-entry by description (fallback)
+      const flatLabel = flatCfg.label || flatId;
+      const match = _ledger.find(e =>
+        e.addedBy && e.addedBy.startsWith("Auto") &&
+        e.description && e.description.includes(flatLabel) &&
+        e.description && e.description.includes(monthLabel)
+      );
+      if (match) await deleteLedgerEntry(match.id);
     }
 
     if (!_payments[mk]) _payments[mk] = {};
