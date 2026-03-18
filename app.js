@@ -60,8 +60,8 @@ function renderTable() {
     const rec      = md[flat.id]||{paid:false,date:"",amount:0};
     const isPaid   = rec.paid;
     const owner    = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
-    const bal      = Sheets.calcBalance(flat.id);          // total balance including this month
-    const balBefore= Sheets.calcBalanceBefore(flat.id, state.currentYear, state.currentMonth); // before this month
+    const bal      = Sheets.calcBalance(flat.id, state.currentYear, state.currentMonth);
+    const balBefore= Sheets.calcBalanceBefore(flat.id, state.currentYear, state.currentMonth);
     const due      = flat.charge - balBefore;              // what was owed entering this month
 
     const balHtml = bal===0 ? `<span class="bal-neutral">₹0</span>`
@@ -132,7 +132,7 @@ function renderYearly() {
       if(r.paid){tp++;return `<td class="y-paid" title="₹${r.amount||flat.charge}">✓</td>`;}
       return `<td class="y-pend">—</td>`;
     }).join("");
-    const bal=Sheets.calcBalance(flat.id);
+    const bal=Sheets.calcBalance(flat.id, state.currentYear, state.currentMonth);
     const bh=bal>0?`<span class="bal-credit">+₹${bal}</span>`
             :bal<0?`<span class="bal-due">-₹${Math.abs(bal)}</span>`
             :`<span class="bal-neutral">₹0</span>`;

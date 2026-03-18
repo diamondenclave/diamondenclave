@@ -154,35 +154,57 @@ const Sheets = (() => {
   }
 
   // ── BALANCE CALCULATION ───────────────────────────────────
-  // Returns net balance across ALL months: positive = credit, negative = due
-  function calcBalance(flatId) {
-    let balance = 0;
-    const flat  = CONFIG.FLATS.find(f => f.id === flatId);
-    if (!flat || flat.parking) return 0;
-    Object.values(_payments).forEach(monthData => {
-      const rec = monthData[flatId];
-      if (rec && rec.paid) {
-        balance += (rec.amount || flat.charge) - flat.charge;
-      }
-    });
-    return balance;
+
+  // Count how many months have passed from START up to and including (upToYear, upToMonth)
+  function _monthsElapsed(upToYear, upToMonth) {
+    const start = CONFIG.START_YEAR * 12 + CONFIG.START_MONTH - 1;
+    const end   = upToYear * 12 + upToMonth - 1;
+    return Math.max(0, end - start + 1);
   }
 
-  // Returns balance BEFORE a specific month — used to calculate "Due This Month"
-  // Excludes the given year/month so we know what was owed entering that month
-  function calcBalanceBefore(flatId, year, month) {
-    let balance = 0;
-    const flat  = CONFIG.FLATS.find(f => f.id === flatId);
-    if (!flat || flat.parking) return 0;
-    const currentMk = monthKey(year, month);
-    Object.entries(_payments).forEach(([mk, monthData]) => {
-      if (mk >= currentMk) return; // skip current and future months
+  // Total amount paid by a flat across all months
+  function _totalPaid(flatId) {
+    let total = 0;
+    Object.values(_payments).forEach(monthData => {
       const rec = monthData[flatId];
-      if (rec && rec.paid) {
-        balance += (rec.amount || flat.charge) - flat.charge;
-      }
+      if (rec && rec.paid) total += (rec.amount || 0);
     });
-    return balance;
+    return total;
+  }
+
+  // Running balance UP TO AND INCLUDING current viewed month
+  // Positive = credit (overpaid), Negative = due (underpaid/missed)
+  function calcBalance(flatId, upToYear, upToMonth) {
+    const flat = CONFIG.FLATS.find(f => f.id === flatId);
+    if (!flat || flat.parking) return 0;
+    // Use current state month if not specified
+    const y = upToYear  || (typeof state !== "undefined" ? state.currentYear  : CONFIG.START_YEAR);
+    const m = upToMonth || (typeof state !== "undefined" ? state.currentMonth : CONFIG.START_MONTH);
+    const totalOwed = flat.charge * _monthsElapsed(y, m);
+    const totalPaid = _totalPaid(flatId);
+    return totalPaid - totalOwed;
+  }
+
+  // Balance BEFORE the given month — used to calculate "Due This Month"
+  // Excludes the current month from both owed and paid
+  function calcBalanceBefore(flatId, year, month) {
+    const flat = CONFIG.FLATS.find(f => f.id === flatId);
+    if (!flat || flat.parking) return 0;
+    // Months elapsed before this month
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear  = month === 1 ? year - 1 : year;
+    if (prevYear < CONFIG.START_YEAR ||
+       (prevYear === CONFIG.START_YEAR && prevMonth < CONFIG.START_MONTH)) return 0;
+    const totalOwed = flat.charge * _monthsElapsed(prevYear, prevMonth);
+    // Only count payments from months before current
+    const currentMk = monthKey(year, month);
+    let totalPaid = 0;
+    Object.entries(_payments).forEach(([mk, monthData]) => {
+      if (mk >= currentMk) return;
+      const rec = monthData[flatId];
+      if (rec && rec.paid) totalPaid += (rec.amount || 0);
+    });
+    return totalPaid - totalOwed;
   }
 
   // ── OWNERS ────────────────────────────────────────────────
