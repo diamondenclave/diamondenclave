@@ -16,9 +16,68 @@ function renderTreasurerTab() {
   // Action column header — only treasurer/admin
   document.getElementById("ledgerActionHeader")?.classList.toggle("hidden", !canEdit);
 
+  // Sync banner — only show to admin when there are missing ledger entries
+  if (state.isAdmin) _checkMissingLedgerEntries();
+
   renderBalanceGrid();
   renderLedger();
   renderLedgerStats();
+}
+
+// ── Detect missing ledger entries ────────────────────────────
+function _checkMissingLedgerEntries() {
+  const allData = Sheets.getAllData();
+  let missing   = 0;
+  Object.values(allData).forEach(monthData => {
+    Object.values(monthData).forEach(rec => {
+      if (rec.paid && !rec.ledgerRef) missing++;
+    });
+  });
+  const banner = document.getElementById("syncLedgerBanner");
+  const msg    = document.getElementById("syncBannerMsg");
+  if (banner) {
+    banner.classList.toggle("hidden", missing === 0);
+    if (msg) msg.textContent = ` — ${missing} payment${missing>1?"s":""} found with no ledger entry.`;
+  }
+}
+
+// ── Sync missing ledger entries (one-time fix) ────────────────
+async function syncMissingLedgerEntries() {
+  const allData = Sheets.getAllData();
+  const MONTHS  = ["January","February","March","April","May","June",
+                   "July","August","September","October","November","December"];
+  let synced = 0;
+  showToast("Syncing missing entries…");
+
+  for (const [mk, monthData] of Object.entries(allData)) {
+    const [year, month] = mk.split("-").map(Number);
+    for (const [flatId, rec] of Object.entries(monthData)) {
+      if (!rec.paid || rec.ledgerRef) continue; // skip unpaid or already linked
+
+      const flatCfg = CONFIG.FLATS.find(f => f.id === flatId) || {};
+      const owner   = Sheets.getCurrentOwner(flatId, year, month);
+      const ml      = `${MONTHS[month-1]} ${year}`;
+      const desc    = `Maintenance collected — ${flatCfg.label||flatId}${owner?" ("+owner.name+")":""} · ${ml}`;
+
+      // Create ledger entry
+      const entry = await Sheets.addLedgerEntry({
+        date:        rec.date || `${year}-${String(month).padStart(2,"0")}-01`,
+        type:        "Credit",
+        amount:      rec.amount || flatCfg.charge || 500,
+        description: desc,
+        addedBy:     "Auto (Sync)",
+      });
+
+      // Link ledger entry back to payment record
+      await Sheets.linkLedgerRef(flatId, year, month, entry.id);
+      synced++;
+    }
+  }
+
+  showToast(`✓ Synced ${synced} missing ledger entr${synced===1?"y":"ies"}`);
+  document.getElementById("syncLedgerBanner").classList.add("hidden");
+  await Sheets.loadAll();
+  renderLedger(); renderLedgerStats(); renderBalanceGrid();
 }
 
 // ── Per-flat balance grid ─────────────────────────────────────

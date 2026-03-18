@@ -138,6 +138,15 @@
     </div>
   </section>
 
+  <!-- Sync missing entries — ADMIN only, one-time use -->
+  <div id="syncLedgerBanner" class="sync-banner hidden">
+    <div>
+      <strong>⚠ Missing ledger entries detected</strong>
+      <span id="syncBannerMsg"> — some past payments have no ledger credit entry.</span>
+    </div>
+    <button class="btn-primary" onclick="syncMissingLedgerEntries()">🔄 Sync Now</button>
+  </div>
+
   <!-- Treasurer login prompt — shown to public -->
   <div id="treasurerLoginPrompt" class="treasurer-login-prompt">
     <span>🔒 Login as Treasurer to add or edit entries</span>

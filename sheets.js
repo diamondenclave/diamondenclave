@@ -97,19 +97,18 @@ const Sheets = (() => {
                      "July","August","September","October","November","December"];
     const flatCfg = CONFIG.FLATS.find(f => f.id === flatId) || {};
 
-    // ── If REVOKING: delete the associated auto-ledger entry ──
-    if (!paid) {
-      const existing = (_payments[mk]||{})[flatId];
-      if (existing && existing.ledgerRef) {
-        await deleteLedgerEntry(existing.ledgerRef);
-      }
+    // ── Always delete any existing ledger entry for this flat+month first ──
+    // This handles both revoke AND re-mark scenarios cleanly
+    const existing = (_payments[mk]||{})[flatId];
+    if (existing && existing.ledgerRef) {
+      await deleteLedgerEntry(existing.ledgerRef);
     }
 
     if (!_payments[mk]) _payments[mk] = {};
     _payments[mk][flatId] = { paid, date: paid ? date : "", amount: paid ? Number(amount)||0 : 0 };
     _saveLocal();
 
-    // ── If MARKING PAID: auto-create a ledger credit entry ───
+    // ── If MARKING PAID: auto-create a fresh ledger credit entry ──
     let ledgerRef = null;
     if (paid) {
       const owner      = getCurrentOwner(flatId, year, month);
@@ -339,11 +338,32 @@ const Sheets = (() => {
     } catch(e) { _payments={}; _payRecs={}; _owners=[]; _ledger=[]; }
   }
 
+  // Link a ledger entry ref back to an existing payment record (used by sync)
+  async function linkLedgerRef(flatId, year, month, ledgerRefId) {
+    const mk = monthKey(year, month);
+    const fk = flatKey(year, month, flatId);
+    if (_payments[mk] && _payments[mk][flatId]) {
+      _payments[mk][flatId].ledgerRef = ledgerRefId;
+      _saveLocal();
+    }
+    if (!isConfigured()) return;
+    try {
+      const existId = _payRecs[fk];
+      if (existId) {
+        await fetch(`${_url("Payments")}/${existId}`, {
+          method:  "PATCH",
+          headers: _hdr(),
+          body:    JSON.stringify({ fields: { LedgerRef: ledgerRefId } })
+        });
+      }
+    } catch(e) { console.warn("linkLedgerRef failed:", e); }
+  }
+
   return {
     loadAll, isConfigured, monthKey,
     getMonth, getAllData, markPaid, calcBalance, calcBalanceBefore,
     getOwners, getCurrentOwner, getFlatHistory,
     addOwner, updateOwner, transferOwnership, getEmail,
-    getLedger, addLedgerEntry, deleteLedgerEntry,
+    getLedger, addLedgerEntry, deleteLedgerEntry, linkLedgerRef,
   };
 })();
