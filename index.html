@@ -16,7 +16,7 @@
   <div class="header-diamond">◆</div>
   <div class="header-text">
     <h1 class="site-title">Diamond Enclave</h1>
-    <p class="site-subtitle">11/6, Narendra Nath Ghosh Lane, Kolkata-700040</p>
+    <p class="site-subtitle">Maintenance Management Portal</p>
   </div>
   <div class="header-actions">
     <div id="adminBadge"     class="admin-badge hidden"><span class="badge-dot"></span> Admin</div>
@@ -87,84 +87,85 @@
      TREASURER PAGE
 ══════════════════════════════════════════════ -->
 <main class="main-content hidden" id="page_treasurer">
-  <div id="treasurerLocked" class="">
-    <div class="locked-box">
-      <div class="locked-icon">📒</div>
-      <h2 class="locked-title">Treasurer Access Required</h2>
-      <p class="locked-sub">Login as Treasurer to manage the ledger.</p>
-      <button class="btn-primary" onclick="openLoginModal('treasurer')">Login as Treasurer</button>
+  <!-- Stats — visible to everyone -->
+  <section class="stats-row">
+    <div class="stat-card accent"><div class="stat-value" id="ledgerCredit">—</div><div class="stat-label">Total Credits (₹)</div></div>
+    <div class="stat-card warn"><div class="stat-value" id="ledgerDebit">—</div><div class="stat-label">Total Debits (₹)</div></div>
+    <div class="stat-card gold"><div class="stat-value" id="ledgerBalance">—</div><div class="stat-label">Net Balance (₹)</div></div>
+    <div class="stat-card"><div class="stat-value" id="ledgerEntries">—</div><div class="stat-label">Entries</div></div>
+  </section>
+
+  <!-- Per-flat balance — visible to everyone -->
+  <section class="balance-section">
+    <div class="section-header">
+      <h3 class="section-title">Per-Flat Running Balance</h3>
+      <p class="section-sub">Positive = credit (overpaid) · Negative = due (underpaid) · Balance carries forward on ownership transfer</p>
     </div>
-  </div>
-  <div id="treasurerContent" class="hidden">
-    <section class="stats-row">
-      <div class="stat-card accent"><div class="stat-value" id="ledgerCredit">—</div><div class="stat-label">Total Credits (₹)</div></div>
-      <div class="stat-card warn"><div class="stat-value" id="ledgerDebit">—</div><div class="stat-label">Total Debits (₹)</div></div>
-      <div class="stat-card gold"><div class="stat-value" id="ledgerBalance">—</div><div class="stat-label">Net Balance (₹)</div></div>
-      <div class="stat-card"><div class="stat-value" id="ledgerEntries">—</div><div class="stat-label">Entries</div></div>
-    </section>
-    <!-- Per-flat balance summary -->
-    <section class="balance-section">
-      <div class="section-header">
-        <h3 class="section-title">Per-Flat Running Balance</h3>
-        <p class="section-sub">Positive = credit (overpaid) · Negative = due (underpaid) · Balance carries forward with flat on ownership transfer</p>
-      </div>
-      <div class="balance-grid" id="balanceGrid"></div>
-    </section>
-    <!-- Add entry -->
-    <section class="add-entry-section">
-      <div class="section-header"><h3 class="section-title">Add Ledger Entry</h3></div>
-      <div class="entry-form">
-        <div class="entry-form-row">
-          <div class="form-group">
-            <label class="form-label">Type</label>
-            <select id="entryType" class="form-select">
-              <option value="Credit">Credit (Income)</option>
-              <option value="Debit">Debit (Expense)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Amount (₹)</label>
-            <input type="number" id="entryAmount" class="form-input" placeholder="0" min="0"/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Date</label>
-            <input type="date" id="entryDate" class="form-input"/>
-          </div>
+    <div class="balance-grid" id="balanceGrid"></div>
+  </section>
+
+  <!-- Add entry — TREASURER / ADMIN only -->
+  <section class="add-entry-section" id="addEntrySection" style="display:none">
+    <div class="section-header"><h3 class="section-title">Add Ledger Entry</h3></div>
+    <div class="entry-form">
+      <div class="entry-form-row">
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select id="entryType" class="form-select">
+            <option value="Credit">Credit (Income)</option>
+            <option value="Debit">Debit (Expense)</option>
+          </select>
         </div>
-        <div class="entry-form-row">
-          <div class="form-group form-group-wide">
-            <label class="form-label">Description</label>
-            <input type="text" id="entryDesc" class="form-input" placeholder="e.g. Electricity bill payment, Maintenance collected from Flat 2A…"/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">&nbsp;</label>
-            <button class="btn-primary" onclick="addLedgerEntry()">+ Add Entry</button>
-          </div>
+        <div class="form-group">
+          <label class="form-label">Amount (₹)</label>
+          <input type="number" id="entryAmount" class="form-input" placeholder="0" min="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" id="entryDate" class="form-input"/>
         </div>
       </div>
-    </section>
-    <!-- Ledger table -->
-    <section class="table-section">
-      <div class="ledger-controls">
-        <input type="text" id="ledgerSearch" class="form-input" placeholder="🔍 Search…" oninput="renderLedger()" style="max-width:260px"/>
-        <select id="ledgerFilter" class="form-select" onchange="renderLedger()" style="max-width:160px">
-          <option value="All">All Entries</option>
-          <option value="Credit">Credits Only</option>
-          <option value="Debit">Debits Only</option>
-        </select>
-        <button class="btn-primary" onclick="exportLedgerExcel()">⬇ Export Ledger</button>
+      <div class="entry-form-row">
+        <div class="form-group form-group-wide">
+          <label class="form-label">Description</label>
+          <input type="text" id="entryDesc" class="form-input" placeholder="e.g. Electricity bill payment, Cleaning charges…"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn-primary" onclick="addLedgerEntry()">+ Add Entry</button>
+        </div>
       </div>
-      <div class="table-wrapper">
-        <table class="payment-table">
-          <thead><tr>
-            <th>Date</th><th>Type</th><th>Description</th>
-            <th>Amount (₹)</th><th>Added By</th><th>Action</th>
-          </tr></thead>
-          <tbody id="ledgerBody"></tbody>
-        </table>
-      </div>
-    </section>
+    </div>
+  </section>
+
+  <!-- Treasurer login prompt — shown to public -->
+  <div id="treasurerLoginPrompt" class="treasurer-login-prompt">
+    <span>🔒 Login as Treasurer to add or edit entries</span>
+    <button class="btn-outline" onclick="openLoginModal('treasurer')">Treasurer Login</button>
   </div>
+
+  <!-- Ledger table — visible to everyone, download for everyone -->
+  <section class="table-section">
+    <div class="ledger-controls">
+      <input type="text" id="ledgerSearch" class="form-input" placeholder="🔍 Search…" oninput="renderLedger()" style="max-width:260px"/>
+      <select id="ledgerFilter" class="form-select" onchange="renderLedger()" style="max-width:160px">
+        <option value="All">All Entries</option>
+        <option value="Credit">Credits Only</option>
+        <option value="Debit">Debits Only</option>
+      </select>
+      <button class="btn-primary" onclick="exportLedgerExcel()">⬇ Download Excel</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="payment-table">
+        <thead><tr>
+          <th>Date</th><th>Type</th><th>Description</th>
+          <th>Amount (₹)</th><th>Added By</th>
+          <th id="ledgerActionHeader" class="hidden">Action</th>
+        </tr></thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <!-- ══════════════════════════════════════════════

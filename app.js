@@ -35,8 +35,7 @@ function switchTab(tab) {
     document.getElementById("tab_" +t)?.classList.toggle("active", t===tab);
   });
   if (tab==="treasurer") renderTreasurerTab();
-  if (tab==="owners")    renderOwnersTab();
-}
+  if (tab==="owners")    renderOwnersTab();}
 
 // ── Month Navigation ──────────────────────────────────────────
 function changeMonth(dir) {
@@ -176,7 +175,8 @@ function verifyLogin(){
     if(state.loginRole==="treasurer") state.isTreasurer=true;
     closeLoginModal(); _updateAuthUI(); renderTable();
     if(state.loginRole==="treasurer") switchTab("treasurer");
-    if(state.loginRole==="admin")     { document.getElementById("tab_owners").classList.remove("hidden"); }
+    else if(state.currentTab==="treasurer") renderTreasurerTab();
+    if(state.loginRole==="admin") { document.getElementById("tab_owners").classList.remove("hidden"); }
     showToast(`✓ Logged in as ${state.loginRole}`);
   } else {
     document.getElementById("loginError").classList.remove("hidden");
@@ -188,6 +188,7 @@ function doLogout(){
   state.isAdmin=false; state.isTreasurer=false;
   document.getElementById("tab_owners").classList.add("hidden");
   _updateAuthUI(); renderTable(); switchTab("payments");
+  if(state.currentTab==="treasurer") renderTreasurerTab();
   showToast("Logged out");
 }
 function _updateAuthUI(){

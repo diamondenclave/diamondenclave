@@ -3,13 +3,22 @@
 // ============================================================
 
 function renderTreasurerTab() {
-  const locked  = document.getElementById("treasurerLocked");
-  const content = document.getElementById("treasurerContent");
-  if (!state.isTreasurer && !state.isAdmin) {
-    locked.classList.remove("hidden"); content.classList.add("hidden"); return;
-  }
-  locked.classList.add("hidden"); content.classList.remove("hidden");
-  renderBalanceGrid(); renderLedger(); renderLedgerStats();
+  const canEdit = state.isTreasurer || state.isAdmin;
+
+  // Add entry form — only treasurer/admin
+  const addSection = document.getElementById("addEntrySection");
+  if (addSection) addSection.style.display = canEdit ? "block" : "none";
+
+  // Login prompt — shown only when not logged in as treasurer/admin
+  const prompt = document.getElementById("treasurerLoginPrompt");
+  if (prompt) prompt.style.display = canEdit ? "none" : "flex";
+
+  // Action column header — only treasurer/admin
+  document.getElementById("ledgerActionHeader")?.classList.toggle("hidden", !canEdit);
+
+  renderBalanceGrid();
+  renderLedger();
+  renderLedgerStats();
 }
 
 // ── Per-flat balance grid ─────────────────────────────────────
@@ -17,7 +26,7 @@ function renderBalanceGrid() {
   const grid = document.getElementById("balanceGrid");
   grid.innerHTML = "";
   CONFIG.FLATS.filter(f=>!f.parking).forEach(flat => {
-    const bal = Sheets.calcBalance(flat.id);
+    const bal = Sheets.calcBalance(flat.id, state.currentYear, state.currentMonth);
     const own = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
     const card = document.createElement("div");
     card.className = "balance-card";
@@ -75,7 +84,12 @@ function renderLedger() {
     const isCredit = entry.type === "Credit";
     const isAuto   = (entry.addedBy || "").startsWith("Auto");
     // Auto entries can only be deleted by admin (they are linked to payments)
-    const canDelete = !isAuto || state.isAdmin;
+    const canEdit  = state.isTreasurer || state.isAdmin;
+  entries.forEach(entry => {
+    const tr = document.createElement("tr");
+    const isCredit = entry.type === "Credit";
+    const isAuto   = (entry.addedBy || "").startsWith("Auto");
+    const canDelete = canEdit && (!isAuto || state.isAdmin);
     tr.innerHTML = `
       <td><span class="date-text">${formatDate(entry.date)}</span></td>
       <td>
@@ -87,7 +101,7 @@ function renderLedger() {
         ${isCredit?"+":"-"}₹${Number(entry.amount).toLocaleString("en-IN")}
       </span></td>
       <td><span class="date-text">${entry.addedBy||"—"}</span></td>
-      <td>
+      <td class="${canEdit?"":"hidden"}">
         ${canDelete
           ? `<button class="btn-revoke" onclick="openDeleteLedgerModal('${entry.id}','${(entry.description||"").replace(/'/g,"\\'")}')">✕</button>`
           : `<span style="color:var(--text3);font-size:11px">Auto</span>`}
