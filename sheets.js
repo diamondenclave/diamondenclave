@@ -154,12 +154,29 @@ const Sheets = (() => {
   }
 
   // ── BALANCE CALCULATION ───────────────────────────────────
-  // Returns net balance: positive = credit (overpaid), negative = due (underpaid)
+  // Returns net balance across ALL months: positive = credit, negative = due
   function calcBalance(flatId) {
     let balance = 0;
     const flat  = CONFIG.FLATS.find(f => f.id === flatId);
     if (!flat || flat.parking) return 0;
     Object.values(_payments).forEach(monthData => {
+      const rec = monthData[flatId];
+      if (rec && rec.paid) {
+        balance += (rec.amount || flat.charge) - flat.charge;
+      }
+    });
+    return balance;
+  }
+
+  // Returns balance BEFORE a specific month — used to calculate "Due This Month"
+  // Excludes the given year/month so we know what was owed entering that month
+  function calcBalanceBefore(flatId, year, month) {
+    let balance = 0;
+    const flat  = CONFIG.FLATS.find(f => f.id === flatId);
+    if (!flat || flat.parking) return 0;
+    const currentMk = monthKey(year, month);
+    Object.entries(_payments).forEach(([mk, monthData]) => {
+      if (mk >= currentMk) return; // skip current and future months
       const rec = monthData[flatId];
       if (rec && rec.paid) {
         balance += (rec.amount || flat.charge) - flat.charge;
@@ -302,7 +319,7 @@ const Sheets = (() => {
 
   return {
     loadAll, isConfigured, monthKey,
-    getMonth, getAllData, markPaid, calcBalance,
+    getMonth, getAllData, markPaid, calcBalance, calcBalanceBefore,
     getOwners, getCurrentOwner, getFlatHistory,
     addOwner, updateOwner, transferOwnership, getEmail,
     getLedger, addLedgerEntry, deleteLedgerEntry,

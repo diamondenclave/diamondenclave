@@ -57,19 +57,23 @@ function renderTable() {
   document.getElementById("actionHeader").classList.toggle("hidden", !state.isAdmin);
 
   CONFIG.FLATS.filter(f=>!f.parking).forEach(flat => {
-    const rec    = md[flat.id]||{paid:false,date:"",amount:0};
-    const isPaid = rec.paid;
-    const owner  = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
-    const bal    = Sheets.calcBalance(flat.id);
-    const due    = flat.charge - bal;
+    const rec      = md[flat.id]||{paid:false,date:"",amount:0};
+    const isPaid   = rec.paid;
+    const owner    = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
+    const bal      = Sheets.calcBalance(flat.id);          // total balance including this month
+    const balBefore= Sheets.calcBalanceBefore(flat.id, state.currentYear, state.currentMonth); // before this month
+    const due      = flat.charge - balBefore;              // what was owed entering this month
 
     const balHtml = bal===0 ? `<span class="bal-neutral">₹0</span>`
       : bal>0 ? `<span class="bal-credit">+₹${bal} credit</span>`
       :         `<span class="bal-due">-₹${Math.abs(bal)} due</span>`;
 
-    const dueHtml = due<=0
+    // Due this month: if already paid → Nil, else show adjusted due
+    const dueHtml = isPaid
       ? `<span class="bal-credit">Nil</span>`
-      : `₹${due}`;
+      : due <= 0
+        ? `<span class="bal-credit">Nil</span>`
+        : `₹${due}`;
 
     let actionCell = "";
     if (state.isAdmin) {
@@ -82,7 +86,6 @@ function renderTable() {
         : "";
       actionCell = `<div class="action-group">${payBtn}${billBtn}</div>`;
     }
-
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><span class="flat-badge">${flat.label}</span></td>
