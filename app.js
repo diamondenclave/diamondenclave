@@ -1,407 +1,342 @@
 // ============================================================
-//  DIAMOND ENCLAVE — Main Application Logic
+//  DIAMOND ENCLAVE — Core App Logic
 // ============================================================
+const MONTHS = ["January","February","March","April","May","June",
+                "July","August","September","October","November","December"];
 
-// ── State ───────────────────────────────────────────────────
 let state = {
-  isAdmin:      false,
-  currentYear:  CONFIG.START_YEAR,
-  currentMonth: CONFIG.START_MONTH,
-  pendingFlat:  null,   // for mark-paid flow
-  revokeFlat:   null,   // for revoke flow
-  receiptFlat:  null,   // for post-payment receipt
-  billFlat:     null,   // for manual send-bill flow
+  isAdmin:false, isTreasurer:false, loginRole:"admin",
+  currentYear:CONFIG.START_YEAR, currentMonth:CONFIG.START_MONTH,
+  pendingFlat:null, revokeFlat:null, receiptFlat:null, billFlat:null,
+  deleteLedgerId:null,
+  ownerModalMode:null, ownerFlatId:null, ownerRecordId:null,
+  transferFlatId:null, transferCurrentId:null,
 };
 
-const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
-];
-
-// ── Init ────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────
 (async function init() {
+  const el = document.getElementById("entryDate");
+  if (el) el.value = todayISO();
   const msgs = [];
-  if (!Sheets.isConfigured())               msgs.push("Airtable not connected — using local storage.");
-  if (!EmailManager.isEmailConfigured())    msgs.push("EmailJS not configured — emails disabled.");
+  if (!Sheets.isConfigured())            msgs.push("Airtable not connected — using local storage.");
+  if (!EmailManager.isEmailConfigured()) msgs.push("EmailJS not configured — emails disabled.");
   if (msgs.length) {
-    document.getElementById("bannerMsg").textContent = " " + msgs.join("  |  ") + "  ";
+    document.getElementById("bannerMsg").textContent = " "+msgs.join("  |  ")+"  ";
     document.getElementById("setupBanner").classList.remove("hidden");
   }
   await Sheets.loadAll();
-  renderTable();
-  renderStats();
-  renderYearly();
+  renderTable(); renderStats(); renderYearly();
 })();
 
-// ── Month Navigation ─────────────────────────────────────────
-function changeMonth(dir) {
-  let m = state.currentMonth + dir;
-  let y = state.currentYear;
-  if (m < 1)  { m = 12; y--; }
-  if (m > 12) { m = 1;  y++; }
-
-  // Don't go before start
-  if (y < CONFIG.START_YEAR || (y === CONFIG.START_YEAR && m < CONFIG.START_MONTH)) return;
-
-  state.currentYear  = y;
-  state.currentMonth = m;
-  renderTable();
-  renderStats();
+// ── Tab Switching ─────────────────────────────────────────────
+function switchTab(tab) {
+  ["payments","treasurer","owners"].forEach(t => {
+    document.getElementById("page_"+t)?.classList.toggle("hidden", t!==tab);
+    document.getElementById("tab_" +t)?.classList.toggle("active", t===tab);
+  });
+  if (tab==="treasurer") renderTreasurerTab();
+  if (tab==="owners")    renderOwnersTab();
 }
 
-// ── Render Table ─────────────────────────────────────────────
+// ── Month Navigation ──────────────────────────────────────────
+function changeMonth(dir) {
+  let m=state.currentMonth+dir, y=state.currentYear;
+  if(m<1){m=12;y--;} if(m>12){m=1;y++;}
+  if(y<CONFIG.START_YEAR||(y===CONFIG.START_YEAR&&m<CONFIG.START_MONTH)) return;
+  state.currentYear=y; state.currentMonth=m;
+  renderTable(); renderStats();
+}
+
+// ── Render Payments Table ─────────────────────────────────────
 function renderTable() {
   document.getElementById("monthDisplay").textContent =
-    `${MONTHS[state.currentMonth - 1]} ${state.currentYear}`;
-
-  const monthData = Sheets.getMonth(state.currentYear, state.currentMonth);
+    `${MONTHS[state.currentMonth-1]} ${state.currentYear}`;
+  const md    = Sheets.getMonth(state.currentYear, state.currentMonth);
   const tbody = document.getElementById("tableBody");
   tbody.innerHTML = "";
-
-  // Show/hide admin columns
   document.getElementById("actionHeader").classList.toggle("hidden", !state.isAdmin);
-  document.getElementById("emailHeader").classList.toggle("hidden", !state.isAdmin);
-  document.getElementById("manageEmailsBtn").classList.toggle("hidden", !state.isAdmin);
 
-  CONFIG.FLATS.forEach(flat => {
-    const rec    = monthData[flat.id] || { paid: false, date: "" };
+  CONFIG.FLATS.filter(f=>!f.parking).forEach(flat => {
+    const rec    = md[flat.id]||{paid:false,date:"",amount:0};
     const isPaid = rec.paid;
-    const email  = EmailManager.getEmail(flat.id);
-    const tr     = document.createElement("tr");
+    const owner  = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
+    const bal    = Sheets.calcBalance(flat.id);
+    const due    = flat.charge - bal;
 
-    // Email cell — show address with edit indicator, or "No email" prompt
-    const emailCell = state.isAdmin
-      ? (email
-          ? `<span class="email-chip" title="${email}">✉ ${email}</span>`
-          : `<span class="email-missing" onclick="openEmailsPanel()">+ Add email</span>`)
-      : '';
+    const balHtml = bal===0 ? `<span class="bal-neutral">₹0</span>`
+      : bal>0 ? `<span class="bal-credit">+₹${bal} credit</span>`
+      :         `<span class="bal-due">-₹${Math.abs(bal)} due</span>`;
 
-    // Action buttons
-    let actionCell = '';
+    const dueHtml = due<=0
+      ? `<span class="bal-credit">Nil</span>`
+      : `₹${due}`;
+
+    let actionCell = "";
     if (state.isAdmin) {
-      const payBtn    = isPaid
-        ? `<button class="btn-revoke" onclick="openRevokeModal('${flat.id}','${flat.owner}')">✕ Revoke</button>`
-        : `<button class="btn-pay"    onclick="openPaymentModal('${flat.id}','${flat.owner}')">✓ Mark Paid</button>`;
-      const billBtn   = email
-        ? `<button class="btn-bill"   onclick="openSendBillModal('${flat.id}')">✉ Send Bill</button>`
-        : '';
+      const payBtn  = isPaid
+        ? `<button class="btn-revoke" onclick="openRevokeModal('${flat.id}')">✕ Revoke</button>`
+        : `<button class="btn-pay"    onclick="openPaymentModal('${flat.id}',${due})">✓ Mark Paid</button>`;
+      const email   = owner?.email||"";
+      const billBtn = email
+        ? `<button class="btn-bill" onclick="openSendBillModal('${flat.id}')">✉ Bill</button>`
+        : "";
       actionCell = `<div class="action-group">${payBtn}${billBtn}</div>`;
     }
 
+    const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><span class="flat-badge">Flat ${flat.id}</span></td>
-      <td><span class="owner-name">${flat.owner}</span></td>
-      <td><span class="amount-text">₹${flat.charge.toLocaleString('en-IN')}</span></td>
-      <td>
-        <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
-          ${isPaid ? 'PAID' : 'PENDING'}
-        </span>
-      </td>
-      <td><span class="date-text">${isPaid && rec.date ? formatDate(rec.date) : '—'}</span></td>
-      <td class="${state.isAdmin ? '' : 'hidden'}">${emailCell}</td>
-      <td class="${state.isAdmin ? '' : 'hidden'}">${actionCell}</td>
+      <td><span class="flat-badge">${flat.label}</span></td>
+      <td><span class="owner-name">${owner?owner.name:"—"}</span></td>
+      <td><span class="amount-text">₹${flat.charge}</span></td>
+      <td>${balHtml}</td>
+      <td>${dueHtml}</td>
+      <td><span class="status-badge ${isPaid?"status-paid":"status-pending"}">${isPaid?"PAID":"PENDING"}</span></td>
+      <td><span class="amount-text" style="font-size:15px">${isPaid&&rec.amount?"₹"+rec.amount:"—"}</span></td>
+      <td><span class="date-text">${isPaid&&rec.date?formatDate(rec.date):"—"}</span></td>
+      <td class="${state.isAdmin?"":"hidden"}">${actionCell}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// ── Render Stats ─────────────────────────────────────────────
+// ── Render Stats ──────────────────────────────────────────────
 function renderStats() {
-  const monthData = Sheets.getMonth(state.currentYear, state.currentMonth);
-  let paid = 0, collected = 0;
-
-  CONFIG.FLATS.forEach(flat => {
-    const rec = monthData[flat.id] || {};
-    if (rec.paid) { paid++; collected += flat.charge; }
-  });
-
-  document.getElementById("statPaid").textContent     = paid;
-  document.getElementById("statPending").textContent  = CONFIG.FLATS.length - paid;
-  document.getElementById("statCollected").textContent = `₹${collected.toLocaleString('en-IN')}`;
+  const md = Sheets.getMonth(state.currentYear, state.currentMonth);
+  let paid=0, collected=0;
+  const flats = CONFIG.FLATS.filter(f=>!f.parking);
+  flats.forEach(f=>{const r=md[f.id]||{};if(r.paid){paid++;collected+=r.amount||f.charge;}});
+  document.getElementById("statPaid").textContent      = paid;
+  document.getElementById("statPending").textContent   = flats.length-paid;
+  document.getElementById("statCollected").textContent = "₹"+collected.toLocaleString("en-IN");
 }
 
-// ── Render Yearly Summary ─────────────────────────────────────
+// ── Yearly Summary ────────────────────────────────────────────
 function renderYearly() {
-  const allData = Sheets.getAllData();
-  const container = document.getElementById("yearlyContent");
-
-  // Gather all unique year-months from start till current
-  const months = [];
-  let y = CONFIG.START_YEAR, m = CONFIG.START_MONTH;
-  const nowY = state.currentYear, nowM = state.currentMonth;
-  while (y < nowY || (y === nowY && m <= nowM)) {
-    months.push({ y, m });
-    m++; if (m > 12) { m = 1; y++; }
+  const all=Sheets.getAllData(), months=[];
+  let y=CONFIG.START_YEAR,m=CONFIG.START_MONTH;
+  while(y<state.currentYear||(y===state.currentYear&&m<=state.currentMonth)){
+    months.push({y,m}); m++; if(m>12){m=1;y++;}
   }
-
-  let html = `<table class="yearly-table">
-    <thead><tr>
-      <th>Flat / Owner</th>
-      ${months.map(({y,m}) => `<th>${MONTHS[m-1].slice(0,3)} ${y}</th>`).join('')}
-      <th>Total Paid</th>
-    </tr></thead><tbody>`;
-
-  CONFIG.FLATS.forEach(flat => {
-    let totalPaid = 0;
-    const cells = months.map(({y, m}) => {
-      const mk  = Sheets.monthKey(y, m);
-      const rec = (allData[mk] || {})[flat.id] || {};
-      if (rec.paid) { totalPaid++; return `<td class="y-paid">✓</td>`; }
+  let html=`<table class="yearly-table"><thead><tr>
+    <th>Flat</th>
+    ${months.map(({y,m})=>`<th>${MONTHS[m-1].slice(0,3)} ${y}</th>`).join("")}
+    <th>Paid</th><th>Balance</th>
+  </tr></thead><tbody>`;
+  CONFIG.FLATS.filter(f=>!f.parking).forEach(flat=>{
+    let tp=0;
+    const cells=months.map(({y,m})=>{
+      const r=(all[Sheets.monthKey(y,m)]||{})[flat.id]||{};
+      if(r.paid){tp++;return `<td class="y-paid" title="₹${r.amount||flat.charge}">✓</td>`;}
       return `<td class="y-pend">—</td>`;
-    }).join('');
-
-    html += `<tr>
-      <td><strong>Flat ${flat.id}</strong> <span style="color:var(--text2);font-size:12px;">${flat.owner}</span></td>
+    }).join("");
+    const bal=Sheets.calcBalance(flat.id);
+    const bh=bal>0?`<span class="bal-credit">+₹${bal}</span>`
+            :bal<0?`<span class="bal-due">-₹${Math.abs(bal)}</span>`
+            :`<span class="bal-neutral">₹0</span>`;
+    const own=Sheets.getCurrentOwner(flat.id,state.currentYear,state.currentMonth);
+    html+=`<tr>
+      <td><strong>${flat.label}</strong><br><span style="color:var(--text2);font-size:11px">${own?own.name:"—"}</span></td>
       ${cells}
-      <td><strong style="color:var(--teal)">${totalPaid}/${months.length}</strong></td>
+      <td><strong style="color:var(--teal)">${tp}/${months.length}</strong></td>
+      <td>${bh}</td>
     </tr>`;
   });
-
-  html += `</tbody></table>`;
-  container.innerHTML = html;
+  document.getElementById("yearlyContent").innerHTML = html+"</tbody></table>";
+}
+function toggleYearly(){
+  const p=document.getElementById("yearlyPanel"),open=p.classList.toggle("hidden");
+  document.getElementById("yearlyArrow").textContent=open?"▼":"▲";
+  if(!open) renderYearly();
 }
 
-function toggleYearly() {
-  const panel = document.getElementById("yearlyPanel");
-  const arrow = document.getElementById("yearlyArrow");
-  const open  = panel.classList.toggle("hidden");
-  arrow.textContent = open ? "▼" : "▲";
-  if (!open) renderYearly();
+// ── Login ─────────────────────────────────────────────────────
+function openLoginModal(role){
+  state.loginRole=role||"admin";
+  setLoginRole(state.loginRole);
+  document.getElementById("loginModal").classList.remove("hidden");
+  document.getElementById("loginPasswordInput").value="";
+  document.getElementById("loginError").classList.add("hidden");
+  setTimeout(()=>document.getElementById("loginPasswordInput").focus(),100);
 }
-
-// ── Admin Auth ───────────────────────────────────────────────
-function openAdminModal() {
-  document.getElementById("adminModal").classList.remove("hidden");
-  document.getElementById("adminPasswordInput").value = "";
-  document.getElementById("adminError").classList.add("hidden");
-  setTimeout(() => document.getElementById("adminPasswordInput").focus(), 100);
+function closeLoginModal(){ document.getElementById("loginModal").classList.add("hidden"); }
+function setLoginRole(role){
+  state.loginRole=role;
+  document.getElementById("roleTabAdmin").classList.toggle("active",role==="admin");
+  document.getElementById("roleTabTreasurer").classList.toggle("active",role==="treasurer");
 }
-function closeAdminModal() {
-  document.getElementById("adminModal").classList.add("hidden");
-}
-function verifyAdmin() {
-  const pw = document.getElementById("adminPasswordInput").value;
-  if (pw === CONFIG.ADMIN_PASSWORD) {
-    state.isAdmin = true;
-    document.getElementById("adminModal").classList.add("hidden");
-    document.getElementById("adminLoginBtn").classList.add("hidden");
-    document.getElementById("adminLogoutBtn").classList.remove("hidden");
-    document.getElementById("adminBadge").classList.remove("hidden");
-    renderTable();
-    showToast("✓ Admin access granted");
+function verifyLogin(){
+  const pw=document.getElementById("loginPasswordInput").value;
+  const ok=(state.loginRole==="admin"&&pw===CONFIG.ADMIN_PASSWORD)||
+            (state.loginRole==="treasurer"&&pw===CONFIG.TREASURER_PASSWORD);
+  if(ok){
+    if(state.loginRole==="admin")     state.isAdmin=true;
+    if(state.loginRole==="treasurer") state.isTreasurer=true;
+    closeLoginModal(); _updateAuthUI(); renderTable();
+    if(state.loginRole==="treasurer") switchTab("treasurer");
+    if(state.loginRole==="admin")     { document.getElementById("tab_owners").classList.remove("hidden"); }
+    showToast(`✓ Logged in as ${state.loginRole}`);
   } else {
-    document.getElementById("adminError").classList.remove("hidden");
-    document.getElementById("adminPasswordInput").value = "";
-    document.getElementById("adminPasswordInput").focus();
+    document.getElementById("loginError").classList.remove("hidden");
+    document.getElementById("loginPasswordInput").value="";
+    document.getElementById("loginPasswordInput").focus();
   }
 }
-function adminLogout() {
-  state.isAdmin = false;
-  document.getElementById("adminLoginBtn").classList.remove("hidden");
-  document.getElementById("adminLogoutBtn").classList.add("hidden");
-  document.getElementById("adminBadge").classList.add("hidden");
-  document.getElementById("manageEmailsBtn").classList.add("hidden");
-  renderTable();
+function doLogout(){
+  state.isAdmin=false; state.isTreasurer=false;
+  document.getElementById("tab_owners").classList.add("hidden");
+  _updateAuthUI(); renderTable(); switchTab("payments");
   showToast("Logged out");
 }
+function _updateAuthUI(){
+  const loggedIn=state.isAdmin||state.isTreasurer;
+  document.getElementById("loginBtn").classList.toggle("hidden",loggedIn);
+  document.getElementById("adminLogoutBtn").classList.toggle("hidden",!loggedIn);
+  document.getElementById("adminBadge").classList.toggle("hidden",!state.isAdmin);
+  document.getElementById("treasurerBadge").classList.toggle("hidden",!state.isTreasurer);
+}
 
-// ── Payment Modal ────────────────────────────────────────────
-function openPaymentModal(flatId, owner) {
-  state.pendingFlat = flatId;
-  document.getElementById("payModalTitle").textContent  = `Mark Flat ${flatId} as Paid`;
-  document.getElementById("payModalSub").textContent    = `Owner: ${owner} · ₹${CONFIG.FLATS.find(f=>f.id===flatId).charge.toLocaleString('en-IN')}`;
-  document.getElementById("paymentDateInput").value     = todayISO();
+// ── Payment Modal ─────────────────────────────────────────────
+function openPaymentModal(flatId,due){
+  state.pendingFlat=flatId;
+  const flat=getFlatCfg(flatId);
+  const own=Sheets.getCurrentOwner(flatId,state.currentYear,state.currentMonth);
+  document.getElementById("payModalTitle").textContent=`Mark ${flat.label} as Paid`;
+  document.getElementById("payModalSub").textContent=`Owner: ${own?own.name:"—"}`;
+  const notice=document.getElementById("payDueNotice");
+  if(due!==flat.charge){
+    notice.textContent=due>0?`Adjusted due: ₹${due} (balance applied)`:`No payment needed — credit covers this month`;
+    notice.classList.remove("hidden");
+  } else notice.classList.add("hidden");
+  document.getElementById("paymentDateInput").value=todayISO();
+  document.getElementById("paymentAmountInput").value=Math.max(0,due);
   document.getElementById("paymentModal").classList.remove("hidden");
 }
-function closePaymentModal() {
-  document.getElementById("paymentModal").classList.add("hidden");
-  state.pendingFlat = null;
+function closePaymentModal(){
+  document.getElementById("paymentModal").classList.add("hidden"); state.pendingFlat=null;
 }
-async function confirmPayment() {
-  if (!state.pendingFlat) return;
-  const date    = document.getElementById("paymentDateInput").value || todayISO();
-  const flatId  = state.pendingFlat;
-  await Sheets.markPaid(state.currentYear, state.currentMonth, flatId, date, true);
-  closePaymentModal();
-  renderTable();
-  renderStats();
-  renderYearly();
-
-  // Offer receipt email
-  const email = EmailManager.getEmail(flatId);
-  const flat  = CONFIG.FLATS.find(f => f.id === flatId);
-  state.receiptFlat = { flatId, date };
-  const sub = document.getElementById("receiptModalSub");
-  sub.textContent = `${flat.owner} · Flat ${flatId} · ₹${flat.charge.toLocaleString('en-IN')}`;
-  document.getElementById("receiptEmailInput").value = email || "";
+async function confirmPayment(){
+  if(!state.pendingFlat) return;
+  const date=document.getElementById("paymentDateInput").value||todayISO();
+  const amt =Number(document.getElementById("paymentAmountInput").value)||0;
+  const fid =state.pendingFlat;
+  await Sheets.markPaid(state.currentYear,state.currentMonth,fid,date,true,amt);
+  closePaymentModal(); renderTable(); renderStats(); renderYearly();
+  const own=Sheets.getCurrentOwner(fid,state.currentYear,state.currentMonth);
+  state.receiptFlat={flatId:fid,date,amount:amt};
+  const flat=getFlatCfg(fid);
+  document.getElementById("receiptModalSub").textContent=`${own?own.name:fid} · ${flat.label} · ₹${amt}`;
+  document.getElementById("receiptEmailInput").value=own?.email||"";
   document.getElementById("receiptModal").classList.remove("hidden");
 }
 
-// ── Revoke Modal ─────────────────────────────────────────────
-function openRevokeModal(flatId, owner) {
-  state.revokeFlat = flatId;
-  document.getElementById("revokeModalSub").textContent = `Flat ${flatId} · ${owner}`;
+// ── Revoke ────────────────────────────────────────────────────
+function openRevokeModal(flatId){
+  state.revokeFlat=flatId;
+  const own=Sheets.getCurrentOwner(flatId,state.currentYear,state.currentMonth);
+  document.getElementById("revokeModalSub").textContent=`${getFlatCfg(flatId).label} · ${own?own.name:"—"}`;
   document.getElementById("revokeModal").classList.remove("hidden");
 }
-function closeRevokeModal() {
-  document.getElementById("revokeModal").classList.add("hidden");
-  state.revokeFlat = null;
-}
-async function confirmRevoke() {
-  if (!state.revokeFlat) return;
-  await Sheets.markPaid(state.currentYear, state.currentMonth, state.revokeFlat, "", false);
-  closeRevokeModal();
-  renderTable();
-  renderStats();
-  renderYearly();
-  showToast(`Payment revoked for Flat ${state.revokeFlat}`);
+function closeRevokeModal(){ document.getElementById("revokeModal").classList.add("hidden"); state.revokeFlat=null; }
+async function confirmRevoke(){
+  if(!state.revokeFlat) return;
+  await Sheets.markPaid(state.currentYear,state.currentMonth,state.revokeFlat,"",false,0);
+  closeRevokeModal(); renderTable(); renderStats(); renderYearly();
+  showToast(`Payment revoked`);
 }
 
-// ── Close modal on backdrop click ────────────────────────────
-function closeModalOutside(e) {
-  if (e.target === e.currentTarget) {
-    closeAdminModal();
-    closePaymentModal();
-    closeRevokeModal();
-    closeEmailsPanel();
-    closeSendBillModal();
-    closeReceiptModal();
-  }
-}
-
-// ── Receipt Modal ─────────────────────────────────────────────
-async function confirmSendReceipt() {
-  const email = document.getElementById("receiptEmailInput").value.trim();
-  if (!email) { closeReceiptModal(); showToast(`✓ Flat ${state.receiptFlat.flatId} marked as paid`); return; }
-  const { flatId, date } = state.receiptFlat;
-  const flat = CONFIG.FLATS.find(f => f.id === flatId);
-  closeReceiptModal();
-  showToast("Sending receipt…");
-  const ok = await EmailManager.sendReceipt(flat, date, email,
-    MONTHS[state.currentMonth - 1], state.currentYear);
-  showToast(ok ? `✉ Receipt sent to ${email}` : `✓ Paid — receipt failed (check email config)`);
-}
-function closeReceiptModal() {
-  document.getElementById("receiptModal").classList.add("hidden");
-  state.receiptFlat = null;
-  showToast(`✓ Payment recorded`);
-}
-
-// ── Send Bill Modal ───────────────────────────────────────────
-function openSendBillModal(flatId) {
-  const flat  = CONFIG.FLATS.find(f => f.id === flatId);
-  const email = EmailManager.getEmail(flatId);
-  state.billFlat = flatId;
-  document.getElementById("billModalTitle").textContent = `Send Bill — Flat ${flatId}`;
-  document.getElementById("billModalSub").textContent   = `${flat.owner} · ₹${flat.charge.toLocaleString('en-IN')} due`;
-  document.getElementById("billEmailInput").value       = email || "";
-
-  // Build preview
-  const monthLabel = `${MONTHS[state.currentMonth - 1]} ${state.currentYear}`;
-  document.getElementById("billPreview").innerHTML = buildBillPreviewHTML(flat, monthLabel);
+// ── Send Bill ─────────────────────────────────────────────────
+function openSendBillModal(flatId){
+  const flat=getFlatCfg(flatId);
+  const own =Sheets.getCurrentOwner(flatId,state.currentYear,state.currentMonth);
+  const bal =Sheets.calcBalance(flatId);
+  const due =flat.charge-bal;
+  state.billFlat=flatId;
+  document.getElementById("billModalTitle").textContent=`Send Bill — ${flat.label}`;
+  document.getElementById("billModalSub").textContent=`${own?own.name:"—"} · ₹${Math.max(0,due)} due`;
+  document.getElementById("billEmailInput").value=own?.email||"";
+  const ml=`${MONTHS[state.currentMonth-1]} ${state.currentYear}`;
+  document.getElementById("billPreview").innerHTML=`<div class="bill-preview-inner">
+    <div class="bp-header">Diamond Enclave</div>
+    <div class="bp-sub">Bill · ${ml}</div>
+    <div class="bp-row"><span>Flat</span><span>${flat.label}</span></div>
+    <div class="bp-row"><span>Owner</span><span>${own?own.name:"—"}</span></div>
+    <div class="bp-row"><span>Standard</span><span>₹${flat.charge}</span></div>
+    ${bal!==0?`<div class="bp-row"><span>Balance</span><span>${bal>0?"+":"-"}₹${Math.abs(bal)}</span></div>`:""}
+    <div class="bp-row bp-total"><span>Amount Due</span><span>₹${Math.max(0,due)}</span></div>
+  </div>`;
   document.getElementById("sendBillModal").classList.remove("hidden");
 }
-function closeSendBillModal() {
-  document.getElementById("sendBillModal").classList.add("hidden");
-  state.billFlat = null;
-}
-async function confirmSendBill() {
-  const email = document.getElementById("billEmailInput").value.trim();
-  if (!email) { showToast("Please enter an email address"); return; }
-  const flat       = CONFIG.FLATS.find(f => f.id === state.billFlat);
-  const monthLabel = `${MONTHS[state.currentMonth - 1]} ${state.currentYear}`;
-  closeSendBillModal();
-  showToast("Sending bill…");
-  const ok = await EmailManager.sendBill(flat, email, monthLabel);
-  showToast(ok ? `✉ Bill sent to ${email}` : `❌ Failed to send — check email configuration`);
-}
-function buildBillPreviewHTML(flat, monthLabel) {
-  return `<div class="bill-preview-inner">
-    <div class="bp-header">Diamond Enclave</div>
-    <div class="bp-sub">Maintenance Bill · ${monthLabel}</div>
-    <div class="bp-row"><span>Flat</span><span>${flat.id}</span></div>
-    <div class="bp-row"><span>Owner</span><span>${flat.owner}</span></div>
-    <div class="bp-row bp-total"><span>Amount Due</span><span>₹${flat.charge.toLocaleString('en-IN')}</span></div>
-  </div>`;
+function closeSendBillModal(){ document.getElementById("sendBillModal").classList.add("hidden"); state.billFlat=null; }
+async function confirmSendBill(){
+  const email=document.getElementById("billEmailInput").value.trim();
+  if(!email){showToast("Please enter an email");return;}
+  const flat=getFlatCfg(state.billFlat);
+  const bal =Sheets.calcBalance(state.billFlat);
+  const ml  =`${MONTHS[state.currentMonth-1]} ${state.currentYear}`;
+  closeSendBillModal(); showToast("Sending…");
+  const ok=await EmailManager.sendBill(flat,email,ml,bal);
+  showToast(ok?`✉ Bill sent to ${email}`:`❌ Send failed — check EmailJS config`);
 }
 
-// ── Excel Export ─────────────────────────────────────────────
-function exportExcel() {
-  const allData = Sheets.getAllData();
+// ── Receipt ───────────────────────────────────────────────────
+function closeReceiptModal(){
+  document.getElementById("receiptModal").classList.add("hidden");
+  state.receiptFlat=null; showToast("✓ Payment recorded");
+}
+async function confirmSendReceipt(){
+  const email=document.getElementById("receiptEmailInput").value.trim();
+  if(!email){closeReceiptModal();return;}
+  const {flatId,date,amount}=state.receiptFlat;
+  closeReceiptModal(); showToast("Sending receipt…");
+  const ok=await EmailManager.sendReceipt(getFlatCfg(flatId),date,email,
+    MONTHS[state.currentMonth-1],state.currentYear,amount);
+  showToast(ok?`✉ Receipt sent to ${email}`:`✓ Paid — receipt failed`);
+}
 
-  // Build months list from start to current
-  const months = [];
-  let y = CONFIG.START_YEAR, m = CONFIG.START_MONTH;
-  const nowY = state.currentYear, nowM = state.currentMonth;
-  while (y < nowY || (y === nowY && m <= nowM)) {
-    months.push({ y, m });
-    m++; if (m > 12) { m = 1; y++; }
+// ── Close modals on backdrop ──────────────────────────────────
+function closeModalOutside(e){
+  if(e.target!==e.currentTarget) return;
+  closeLoginModal(); closePaymentModal(); closeRevokeModal();
+  closeSendBillModal(); closeReceiptModal(); closeDeleteLedgerModal();
+  closeOwnerModal(); closeTransferModal();
+}
+
+// ── Excel Export ──────────────────────────────────────────────
+function exportExcel(){
+  const all=Sheets.getAllData(), months=[];
+  let y=CONFIG.START_YEAR,m=CONFIG.START_MONTH;
+  while(y<state.currentYear||(y===state.currentYear&&m<=state.currentMonth)){
+    months.push({y,m});m++;if(m>12){m=1;y++;}
   }
-
-  // Build CSV rows
-  const headers = ["Flat", "Owner", "Monthly Charge (₹)",
-    ...months.map(({y,m}) => `${MONTHS[m-1]} ${y}`),
-    "Total Months Paid", "Total Amount Collected (₹)"];
-
-  const rows = CONFIG.FLATS.map(flat => {
-    let totalPaid = 0, totalAmount = 0;
-    const cells = months.map(({y, m}) => {
-      const mk  = Sheets.monthKey(y, m);
-      const rec = (allData[mk] || {})[flat.id] || {};
-      if (rec.paid) {
-        totalPaid++;
-        totalAmount += flat.charge;
-        return rec.date ? `Paid (${formatDate(rec.date)})` : "Paid";
-      }
-      return "Pending";
-    });
-    return [`Flat ${flat.id}`, flat.owner, flat.charge, ...cells, totalPaid, totalAmount];
+  const hdr=["Flat","Owner","Balance (₹)",
+    ...months.map(({y,m})=>`${MONTHS[m-1]} ${y} Status`),
+    ...months.map(({y,m})=>`${MONTHS[m-1]} ${y} Amount`),
+    "Total Paid Months"];
+  const rows=CONFIG.FLATS.filter(f=>!f.parking).map(flat=>{
+    const own=Sheets.getCurrentOwner(flat.id,state.currentYear,state.currentMonth);
+    const bal=Sheets.calcBalance(flat.id);
+    let tp=0;
+    const sc=months.map(({y,m})=>{const r=(all[Sheets.monthKey(y,m)]||{})[flat.id]||{};if(r.paid)tp++;return r.paid?`Paid (${formatDate(r.date)})`:"Pending";});
+    const ac=months.map(({y,m})=>{const r=(all[Sheets.monthKey(y,m)]||{})[flat.id]||{};return r.paid?(r.amount||flat.charge):"";});
+    return[flat.label,own?own.name:"—",bal,...sc,...ac,tp];
   });
-
-  // Summary row
-  const summaryRow = ["TOTAL", "", CONFIG.FLATS.reduce((s,f)=>s+f.charge,0),
-    ...months.map(({y,m}) => {
-      const mk = Sheets.monthKey(y, m);
-      const md = allData[mk] || {};
-      return CONFIG.FLATS.filter(f => (md[f.id]||{}).paid).reduce((s,f)=>s+f.charge,0);
-    }),
-    "", ""
-  ];
-
-  const allRows = [headers, ...rows, [], summaryRow];
-  const csv     = allRows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
-
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href     = url;
-  a.download = `DiamondEnclave_Maintenance_${MONTHS[state.currentMonth-1]}_${state.currentYear}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast("📥 Excel report downloaded");
+  const csv=[hdr,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=`DiamondEnclave_${MONTHS[state.currentMonth-1]}_${state.currentYear}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast("📥 Downloaded");
 }
 
-// ── Utilities ────────────────────────────────────────────────
-function todayISO() {
-  return new Date().toISOString().split("T")[0];
-}
-function formatDate(iso) {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
-
-let _toastTimer;
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.remove("hidden");
-  t.classList.add("show");
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => {
-    t.classList.remove("show");
-    setTimeout(() => t.classList.add("hidden"), 300);
-  }, 2800);
+// ── Utilities ─────────────────────────────────────────────────
+function getFlatCfg(id){ return CONFIG.FLATS.find(f=>f.id===id)||{label:id,charge:500}; }
+function todayISO()    { return new Date().toISOString().split("T")[0]; }
+function formatDate(iso){ if(!iso)return"—";const[y,m,d]=iso.split("-");return`${d}/${m}/${y}`; }
+function fmtMonthKey(mk){ if(!mk)return"—";const[y,m]=mk.split("-");return`${MONTHS[parseInt(m)-1]} ${y}`; }
+let _tt;
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.remove("hidden");t.classList.add("show");
+  clearTimeout(_tt);_tt=setTimeout(()=>{t.classList.remove("show");setTimeout(()=>t.classList.add("hidden"),300);},2800);
 }

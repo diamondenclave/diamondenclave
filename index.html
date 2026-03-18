@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Diamond Enclave — Maintenance Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,208 +11,367 @@
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="site-header">
-    <div class="header-diamond">◆</div>
-    <div class="header-text">
-      <h1 class="site-title">Diamond Enclave</h1>
-      <p class="site-subtitle">11/6, Narendranath Ghosh Lane, Kolkata-700040</p>
-    </div>
-    <div class="header-actions">
-      <div id="adminBadge" class="admin-badge hidden">
-        <span class="badge-dot"></span> Admin
-      </div>
-      <button id="adminLoginBtn" class="btn-outline" onclick="openAdminModal()">Admin Login</button>
-      <button id="adminLogoutBtn" class="btn-outline hidden" onclick="adminLogout()">Logout</button>
-    </div>
-  </header>
-
-  <!-- SETUP BANNER -->
-  <div id="setupBanner" class="setup-banner hidden">
-    ⚙️ <strong>Not fully configured.</strong>
-    <span id="bannerMsg"></span>
-    <a href="SETUP.md" target="_blank">Setup Guide →</a>
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-diamond">◆</div>
+  <div class="header-text">
+    <h1 class="site-title">Diamond Enclave</h1>
+    <p class="site-subtitle">Maintenance Management Portal</p>
   </div>
+  <div class="header-actions">
+    <div id="adminBadge"     class="admin-badge hidden"><span class="badge-dot"></span> Admin</div>
+    <div id="treasurerBadge" class="treasurer-badge hidden"><span class="badge-dot" style="background:var(--gold)"></span> Treasurer</div>
+    <button id="loginBtn"       class="btn-outline"        onclick="openLoginModal()">Login</button>
+    <button id="adminLogoutBtn" class="btn-outline hidden"  onclick="doLogout()">Logout</button>
+  </div>
+</header>
 
-  <!-- MAIN CONTENT -->
-  <main class="main-content">
+<!-- SETUP BANNER -->
+<div id="setupBanner" class="setup-banner hidden">
+  ⚙️ <strong>Not fully configured.</strong>
+  <span id="bannerMsg"></span>
+  <a href="SETUP.md" target="_blank">Setup Guide →</a>
+</div>
 
-    <!-- STATS ROW -->
-    <section class="stats-row" id="statsRow">
-      <div class="stat-card">
-        <div class="stat-value" id="statTotalFlats">9</div>
-        <div class="stat-label">Total Flats</div>
+<!-- PAGE TABS -->
+<div class="page-tabs">
+  <button class="page-tab active" id="tab_payments"   onclick="switchTab('payments')">💳 Payments</button>
+  <button class="page-tab"        id="tab_treasurer"  onclick="switchTab('treasurer')">📒 Treasurer</button>
+  <button class="page-tab hidden" id="tab_owners"     onclick="switchTab('owners')">👤 Owners</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAYMENTS PAGE
+══════════════════════════════════════════════ -->
+<main class="main-content" id="page_payments">
+  <section class="stats-row">
+    <div class="stat-card"><div class="stat-value">9</div><div class="stat-label">Total Flats</div></div>
+    <div class="stat-card accent"><div class="stat-value" id="statPaid">—</div><div class="stat-label">Paid This Month</div></div>
+    <div class="stat-card warn"><div class="stat-value" id="statPending">—</div><div class="stat-label">Pending</div></div>
+    <div class="stat-card gold"><div class="stat-value" id="statCollected">—</div><div class="stat-label">Collected (₹)</div></div>
+  </section>
+  <section class="controls-row">
+    <div class="month-nav">
+      <button class="nav-arrow" onclick="changeMonth(-1)">&#8592;</button>
+      <div class="month-display" id="monthDisplay">March 2026</div>
+      <button class="nav-arrow" onclick="changeMonth(1)">&#8594;</button>
+    </div>
+    <div class="control-buttons">
+      <button class="btn-primary" onclick="exportExcel()">⬇ Download Excel</button>
+    </div>
+  </section>
+  <section class="table-section">
+    <div class="table-wrapper">
+      <table class="payment-table">
+        <thead><tr>
+          <th>Flat</th><th>Current Owner</th><th>Standard</th>
+          <th>Running Balance</th><th>Due This Month</th>
+          <th>Status</th><th>Paid Amount</th><th>Date</th>
+          <th id="actionHeader" class="hidden">Actions</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="yearly-section">
+    <button class="yearly-toggle" onclick="toggleYearly()">
+      <span>📊 Yearly Summary</span><span id="yearlyArrow">▼</span>
+    </button>
+    <div id="yearlyPanel" class="yearly-panel hidden">
+      <div id="yearlyContent"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ══════════════════════════════════════════════
+     TREASURER PAGE
+══════════════════════════════════════════════ -->
+<main class="main-content hidden" id="page_treasurer">
+  <div id="treasurerLocked" class="">
+    <div class="locked-box">
+      <div class="locked-icon">📒</div>
+      <h2 class="locked-title">Treasurer Access Required</h2>
+      <p class="locked-sub">Login as Treasurer to manage the ledger.</p>
+      <button class="btn-primary" onclick="openLoginModal('treasurer')">Login as Treasurer</button>
+    </div>
+  </div>
+  <div id="treasurerContent" class="hidden">
+    <section class="stats-row">
+      <div class="stat-card accent"><div class="stat-value" id="ledgerCredit">—</div><div class="stat-label">Total Credits (₹)</div></div>
+      <div class="stat-card warn"><div class="stat-value" id="ledgerDebit">—</div><div class="stat-label">Total Debits (₹)</div></div>
+      <div class="stat-card gold"><div class="stat-value" id="ledgerBalance">—</div><div class="stat-label">Net Balance (₹)</div></div>
+      <div class="stat-card"><div class="stat-value" id="ledgerEntries">—</div><div class="stat-label">Entries</div></div>
+    </section>
+    <!-- Per-flat balance summary -->
+    <section class="balance-section">
+      <div class="section-header">
+        <h3 class="section-title">Per-Flat Running Balance</h3>
+        <p class="section-sub">Positive = credit (overpaid) · Negative = due (underpaid) · Balance carries forward with flat on ownership transfer</p>
       </div>
-      <div class="stat-card accent">
-        <div class="stat-value" id="statPaid">—</div>
-        <div class="stat-label">Paid This Month</div>
-      </div>
-      <div class="stat-card warn">
-        <div class="stat-value" id="statPending">—</div>
-        <div class="stat-label">Pending</div>
-      </div>
-      <div class="stat-card gold">
-        <div class="stat-value" id="statCollected">—</div>
-        <div class="stat-label">Collected (₹)</div>
+      <div class="balance-grid" id="balanceGrid"></div>
+    </section>
+    <!-- Add entry -->
+    <section class="add-entry-section">
+      <div class="section-header"><h3 class="section-title">Add Ledger Entry</h3></div>
+      <div class="entry-form">
+        <div class="entry-form-row">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select id="entryType" class="form-select">
+              <option value="Credit">Credit (Income)</option>
+              <option value="Debit">Debit (Expense)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" id="entryAmount" class="form-input" placeholder="0" min="0"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" id="entryDate" class="form-input"/>
+          </div>
+        </div>
+        <div class="entry-form-row">
+          <div class="form-group form-group-wide">
+            <label class="form-label">Description</label>
+            <input type="text" id="entryDesc" class="form-input" placeholder="e.g. Electricity bill payment, Maintenance collected from Flat 2A…"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn-primary" onclick="addLedgerEntry()">+ Add Entry</button>
+          </div>
+        </div>
       </div>
     </section>
-
-    <!-- MONTH SELECTOR + EXPORT -->
-    <section class="controls-row">
-      <div class="month-nav">
-        <button class="nav-arrow" onclick="changeMonth(-1)">&#8592;</button>
-        <div class="month-display" id="monthDisplay">March 2026</div>
-        <button class="nav-arrow" onclick="changeMonth(1)">&#8594;</button>
-      </div>
-      <div class="control-buttons">
-        <button id="manageEmailsBtn" class="btn-outline hidden" onclick="openEmailsPanel()">✉ Manage Emails</button>
-        <button class="btn-primary" onclick="exportExcel()">⬇ Download Excel</button>
-      </div>
-    </section>
-
-    <!-- PAYMENT TABLE -->
+    <!-- Ledger table -->
     <section class="table-section">
+      <div class="ledger-controls">
+        <input type="text" id="ledgerSearch" class="form-input" placeholder="🔍 Search…" oninput="renderLedger()" style="max-width:260px"/>
+        <select id="ledgerFilter" class="form-select" onchange="renderLedger()" style="max-width:160px">
+          <option value="All">All Entries</option>
+          <option value="Credit">Credits Only</option>
+          <option value="Debit">Debits Only</option>
+        </select>
+        <button class="btn-primary" onclick="exportLedgerExcel()">⬇ Export Ledger</button>
+      </div>
       <div class="table-wrapper">
-        <table class="payment-table" id="paymentTable">
-          <thead>
-            <tr>
-              <th>Flat</th>
-              <th>Owner</th>
-              <th>Monthly Charge</th>
-              <th>Status</th>
-              <th>Payment Date</th>
-              <th id="emailHeader" class="hidden">Email</th>
-              <th id="actionHeader" class="hidden">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <!-- populated by JS -->
-          </tbody>
+        <table class="payment-table">
+          <thead><tr>
+            <th>Date</th><th>Type</th><th>Description</th>
+            <th>Amount (₹)</th><th>Added By</th><th>Action</th>
+          </tr></thead>
+          <tbody id="ledgerBody"></tbody>
         </table>
       </div>
     </section>
+  </div>
+</main>
 
-    <!-- YEARLY SUMMARY (accordion) -->
-    <section class="yearly-section">
-      <button class="yearly-toggle" onclick="toggleYearly()">
-        <span>📊 Yearly Summary View</span>
-        <span id="yearlyArrow">▼</span>
-      </button>
-      <div id="yearlyPanel" class="yearly-panel hidden">
-        <div id="yearlyContent"></div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ADMIN LOGIN MODAL -->
-  <div id="adminModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-    <div class="modal-box">
-      <div class="modal-diamond">◆</div>
-      <h2 class="modal-title">Admin Access</h2>
-      <p class="modal-sub">Enter the admin password to manage payments</p>
-      <input type="password" id="adminPasswordInput" class="modal-input" placeholder="Password"
-        onkeydown="if(event.key==='Enter') verifyAdmin()" />
-      <div id="adminError" class="modal-error hidden">Incorrect password. Try again.</div>
-      <div class="modal-buttons">
-        <button class="btn-primary" onclick="verifyAdmin()">Login</button>
-        <button class="btn-ghost" onclick="closeAdminModal()">Cancel</button>
-      </div>
+<!-- ══════════════════════════════════════════════
+     OWNERS PAGE
+══════════════════════════════════════════════ -->
+<main class="main-content hidden" id="page_owners">
+  <div id="ownersLocked">
+    <div class="locked-box">
+      <div class="locked-icon">👤</div>
+      <h2 class="locked-title">Admin Access Required</h2>
+      <p class="locked-sub">Login as Admin to manage flat owners.</p>
+      <button class="btn-primary" onclick="openLoginModal('admin')">Login as Admin</button>
     </div>
   </div>
-
-  <!-- CONFIRM PAYMENT MODAL -->
-  <div id="paymentModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-    <div class="modal-box">
-      <div class="modal-diamond accent-diamond">◆</div>
-      <h2 class="modal-title" id="payModalTitle">Confirm Payment</h2>
-      <p class="modal-sub" id="payModalSub">Mark this flat as paid?</p>
-      <input type="date" id="paymentDateInput" class="modal-input" />
-      <div class="modal-buttons">
-        <button class="btn-primary" onclick="confirmPayment()">✓ Mark as Paid</button>
-        <button class="btn-ghost" onclick="closePaymentModal()">Cancel</button>
-      </div>
+  <div id="ownersContent" class="hidden">
+    <div class="section-header" style="margin-bottom:20px">
+      <h3 class="section-title">Flat Owner Registry</h3>
+      <p class="section-sub">Full ownership history per flat · Parking slots G1 &amp; G2 pending assignment</p>
+    </div>
+    <div class="table-wrapper">
+      <table class="payment-table owners-table">
+        <thead><tr>
+          <th>Flat</th><th>Owner Name</th><th>Email</th>
+          <th>Phone</th><th>Move-in</th><th>Move-out</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="ownersTableBody"></tbody>
+      </table>
     </div>
   </div>
+</main>
 
-  <!-- REVOKE PAYMENT MODAL -->
-  <div id="revokeModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-    <div class="modal-box">
-      <div class="modal-diamond warn-diamond">◆</div>
-      <h2 class="modal-title">Revoke Payment?</h2>
-      <p class="modal-sub" id="revokeModalSub">This will mark the flat as unpaid.</p>
-      <div class="modal-buttons">
-        <button class="btn-warn" onclick="confirmRevoke()">Revoke</button>
-        <button class="btn-ghost" onclick="closeRevokeModal()">Cancel</button>
-      </div>
+<!-- ══════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════ -->
+
+<!-- LOGIN -->
+<div id="loginModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond">◆</div>
+    <h2 class="modal-title">Login</h2>
+    <div class="login-role-tabs">
+      <button id="roleTabAdmin"     class="role-tab active" onclick="setLoginRole('admin')">Admin</button>
+      <button id="roleTabTreasurer" class="role-tab"        onclick="setLoginRole('treasurer')">Treasurer</button>
+    </div>
+    <input type="password" id="loginPasswordInput" class="modal-input" placeholder="Password"
+      onkeydown="if(event.key==='Enter') verifyLogin()"/>
+    <div id="loginError" class="modal-error hidden">Incorrect password. Try again.</div>
+    <div class="modal-buttons">
+      <button class="btn-primary" onclick="verifyLogin()">Login</button>
+      <button class="btn-ghost"   onclick="closeLoginModal()">Cancel</button>
     </div>
   </div>
+</div>
 
-  <!-- MANAGE EMAILS PANEL MODAL -->
-  <div id="emailsModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-    <div class="modal-box modal-box-wide">
-      <div class="modal-diamond">◆</div>
-      <h2 class="modal-title">Manage Owner Emails</h2>
-      <p class="modal-sub">Add or update email addresses for bill delivery</p>
-      <div id="emailFormList" class="email-form-list">
-        <!-- populated by JS -->
-      </div>
-      <div class="modal-buttons" style="margin-top:20px;">
-        <button class="btn-primary" onclick="saveEmails()">💾 Save All</button>
-        <button class="btn-ghost" onclick="closeEmailsPanel()">Close</button>
-      </div>
+<!-- MARK PAID -->
+<div id="paymentModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond accent-diamond">◆</div>
+    <h2 class="modal-title" id="payModalTitle">Mark as Paid</h2>
+    <p class="modal-sub"    id="payModalSub"></p>
+    <div class="pay-due-notice hidden" id="payDueNotice"></div>
+    <label class="modal-label">Payment Date</label>
+    <input type="date"   id="paymentDateInput"   class="modal-input"/>
+    <label class="modal-label">Actual Amount Paid (₹)</label>
+    <input type="number" id="paymentAmountInput" class="modal-input" placeholder="500" min="0"/>
+    <div class="modal-buttons">
+      <button class="btn-primary" onclick="confirmPayment()">✓ Mark as Paid</button>
+      <button class="btn-ghost"   onclick="closePaymentModal()">Cancel</button>
     </div>
   </div>
+</div>
 
-  <!-- SEND BILL MODAL -->
-  <div id="sendBillModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-    <div class="modal-box">
-      <div class="modal-diamond accent-diamond">✉</div>
-      <h2 class="modal-title" id="billModalTitle">Send Bill</h2>
-      <p class="modal-sub" id="billModalSub"></p>
-      <div id="billPreview" class="bill-preview"></div>
-      <div id="billEmailRow" class="bill-email-row">
-        <label class="modal-label">Recipient Email</label>
-        <input type="email" id="billEmailInput" class="modal-input" placeholder="owner@email.com" />
-      </div>
-      <div class="modal-buttons">
-        <button class="btn-primary" onclick="confirmSendBill()">✉ Send Bill</button>
-        <button class="btn-ghost" onclick="closeSendBillModal()">Cancel</button>
-      </div>
+<!-- REVOKE -->
+<div id="revokeModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond warn-diamond">◆</div>
+    <h2 class="modal-title">Revoke Payment?</h2>
+    <p class="modal-sub" id="revokeModalSub"></p>
+    <div class="modal-buttons">
+      <button class="btn-warn" onclick="confirmRevoke()">Revoke</button>
+      <button class="btn-ghost" onclick="closeRevokeModal()">Cancel</button>
     </div>
   </div>
+</div>
 
-  <!-- RECEIPT SEND MODAL (after marking paid) -->
-  <div id="receiptModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-    <div class="modal-box">
-      <div class="modal-diamond" style="color:var(--paid-text)">✓</div>
-      <h2 class="modal-title">Payment Recorded!</h2>
-      <p class="modal-sub" id="receiptModalSub">Send a payment receipt to the owner?</p>
-      <div id="receiptEmailRow">
-        <label class="modal-label">Send receipt to</label>
-        <input type="email" id="receiptEmailInput" class="modal-input" placeholder="owner@email.com" />
-      </div>
-      <div class="modal-buttons">
-        <button class="btn-primary" onclick="confirmSendReceipt()">✉ Send Receipt</button>
-        <button class="btn-ghost" onclick="closeReceiptModal()">Skip</button>
-      </div>
+<!-- SEND BILL -->
+<div id="sendBillModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond accent-diamond">✉</div>
+    <h2 class="modal-title" id="billModalTitle">Send Bill</h2>
+    <p class="modal-sub"    id="billModalSub"></p>
+    <div id="billPreview" class="bill-preview"></div>
+    <label class="modal-label">Recipient Email</label>
+    <input type="email" id="billEmailInput" class="modal-input" placeholder="owner@email.com"/>
+    <div class="modal-buttons">
+      <button class="btn-primary" onclick="confirmSendBill()">✉ Send Bill</button>
+      <button class="btn-ghost"   onclick="closeSendBillModal()">Cancel</button>
     </div>
   </div>
+</div>
 
-  <!-- TOAST -->
-  <div id="toast" class="toast hidden"></div>
+<!-- RECEIPT -->
+<div id="receiptModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond" style="color:var(--paid-text)">✓</div>
+    <h2 class="modal-title">Payment Recorded!</h2>
+    <p class="modal-sub" id="receiptModalSub"></p>
+    <label class="modal-label">Send receipt to</label>
+    <input type="email" id="receiptEmailInput" class="modal-input" placeholder="owner@email.com"/>
+    <div class="modal-buttons">
+      <button class="btn-primary" onclick="confirmSendReceipt()">✉ Send Receipt</button>
+      <button class="btn-ghost"   onclick="closeReceiptModal()">Skip</button>
+    </div>
+  </div>
+</div>
 
-  <!-- SCRIPTS -->
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <script src="config.js"></script>
-  <script src="sheets.js"></script>
-  <script src="email.js"></script>
-  <script src="app.js"></script>
-  <script>
-    // Initialise EmailJS once config is loaded
-    if (CONFIG.EMAILJS_PUBLIC_KEY && CONFIG.EMAILJS_PUBLIC_KEY.trim()) {
-      emailjs.init({ publicKey: CONFIG.EMAILJS_PUBLIC_KEY });
-    }
-  </script>
+<!-- ADD / EDIT OWNER -->
+<div id="ownerModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-diamond">◆</div>
+    <h2 class="modal-title" id="ownerModalTitle">Add Owner</h2>
+    <div class="owner-form-grid">
+      <div class="form-group">
+        <label class="modal-label">Full Name *</label>
+        <input type="text" id="ownerName"  class="modal-input" placeholder="e.g. Ramesh Kumar"/>
+      </div>
+      <div class="form-group">
+        <label class="modal-label">Email</label>
+        <input type="email" id="ownerEmail" class="modal-input" placeholder="owner@email.com"/>
+      </div>
+      <div class="form-group">
+        <label class="modal-label">Phone</label>
+        <input type="tel"  id="ownerPhone" class="modal-input" placeholder="e.g. 9876543210"/>
+      </div>
+      <div class="form-group" id="ownerMoveInGroup">
+        <label class="modal-label">Move-in Month *</label>
+        <input type="month" id="ownerMoveIn" class="modal-input"/>
+      </div>
+      <div class="form-group hidden" id="ownerMoveOutGroup">
+        <label class="modal-label">Move-out Month</label>
+        <input type="month" id="ownerMoveOut" class="modal-input"/>
+      </div>
+    </div>
+    <div id="ownerModalError" class="modal-error hidden">Please fill in all required fields.</div>
+    <div class="modal-buttons" style="margin-top:16px">
+      <button class="btn-primary" onclick="confirmOwnerModal()">Save</button>
+      <button class="btn-ghost"   onclick="closeOwnerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER OWNERSHIP -->
+<div id="transferModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-diamond" style="color:var(--gold)">↔</div>
+    <h2 class="modal-title" id="transferModalTitle">Transfer Ownership</h2>
+    <p class="modal-sub"  id="transferModalSub"></p>
+    <div class="transfer-divider">
+      <div class="transfer-section">
+        <p class="transfer-label">Current Owner Move-out Month *</p>
+        <input type="month" id="transferMoveOut" class="modal-input"/>
+      </div>
+      <div class="transfer-arrow">→</div>
+      <div class="transfer-section">
+        <p class="transfer-label">New Owner Details</p>
+        <input type="text"  id="transferName"    class="modal-input" placeholder="New Owner Name *"/>
+        <input type="email" id="transferEmail"   class="modal-input" placeholder="Email"/>
+        <input type="tel"   id="transferPhone"   class="modal-input" placeholder="Phone"/>
+        <input type="month" id="transferMoveIn"  class="modal-input" title="New owner move-in month *"/>
+        <p style="font-size:11px;color:var(--text3);margin-top:4px">Move-in month for new owner</p>
+      </div>
+    </div>
+    <div id="transferError" class="modal-error hidden">Please fill all required fields.</div>
+    <div class="modal-buttons" style="margin-top:16px">
+      <button class="btn-primary" onclick="confirmTransfer()">↔ Transfer</button>
+      <button class="btn-ghost"   onclick="closeTransferModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE LEDGER ENTRY -->
+<div id="deleteLedgerModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond warn-diamond">◆</div>
+    <h2 class="modal-title">Delete Entry?</h2>
+    <p class="modal-sub" id="deleteLedgerSub">This cannot be undone.</p>
+    <div class="modal-buttons">
+      <button class="btn-warn" onclick="confirmDeleteLedger()">Delete</button>
+      <button class="btn-ghost" onclick="closeDeleteLedgerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="config.js"></script>
+<script src="sheets.js"></script>
+<script src="email.js"></script>
+<script src="app.js"></script>
+<script src="treasurer.js"></script>
+<script src="owners.js"></script>
+<script>
+  if (CONFIG.EMAILJS_PUBLIC_KEY && CONFIG.EMAILJS_PUBLIC_KEY.trim())
+    emailjs.init({ publicKey: CONFIG.EMAILJS_PUBLIC_KEY });
+</script>
 </body>
 </html>

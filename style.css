@@ -693,3 +693,155 @@ body {
 .bp-total span:last-child { color: var(--gold-light); font-size: 15px; font-weight: 700; }
 
 .bill-email-row { text-align: left; margin-bottom: 4px; }
+
+/* ─── PAGE TABS ──────────────────────────────────────────── */
+.page-tabs {
+  display: flex; gap: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+}
+.page-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--text2); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  padding: 14px 20px; cursor: pointer;
+  transition: all 0.2s; margin-bottom: -1px;
+}
+.page-tab:hover { color: var(--text); }
+.page-tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+/* ─── BALANCE CHIPS ──────────────────────────────────────── */
+.bal-credit { color: var(--paid-text); font-weight: 600; }
+.bal-due    { color: var(--warn);      font-weight: 600; }
+.bal-neutral{ color: var(--text3); }
+
+/* ─── LOCKED BOX ─────────────────────────────────────────── */
+.locked-box {
+  text-align: center; padding: 80px 40px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); max-width: 400px; margin: 40px auto;
+}
+.locked-icon  { font-size: 48px; margin-bottom: 16px; }
+.locked-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; margin-bottom: 8px; }
+.locked-sub   { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+
+/* ─── SECTION HEADER ─────────────────────────────────────── */
+.section-header { margin-bottom: 16px; }
+.section-title  { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--gold-light); }
+.section-sub    { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+/* ─── BALANCE GRID ───────────────────────────────────────── */
+.balance-section { margin-bottom: 28px; animation: fadeUp 0.4s ease both; }
+.balance-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.balance-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; text-align: center;
+  transition: transform 0.2s;
+}
+.balance-card:hover { transform: translateY(-2px); }
+.balance-flat   { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 700; color: var(--gold-light); }
+.balance-owner  { font-size: 11px; color: var(--text3); margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.balance-amount { font-size: 20px; font-weight: 700; margin: 6px 0 2px; }
+.balance-label  { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); }
+
+/* ─── ENTRY FORM ─────────────────────────────────────────── */
+.add-entry-section { margin-bottom: 28px; animation: fadeUp 0.4s 0.1s ease both; }
+.entry-form { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.entry-form-row { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.entry-form-row:last-child { margin-bottom: 0; }
+.form-group { display: flex; flex-direction: column; gap: 6px; min-width: 120px; }
+.form-group-wide { flex: 1; min-width: 200px; }
+.form-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; }
+.form-input, .form-select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 12px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none; transition: border-color 0.2s;
+}
+.form-input:focus, .form-select:focus { border-color: var(--gold-dim); }
+.form-select option { background: var(--bg2); }
+
+/* ─── LEDGER CONTROLS ────────────────────────────────────── */
+.ledger-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.balance-section { animation: fadeUp 0.4s ease both; }
+
+/* ─── TREASURER BADGE ────────────────────────────────────── */
+.treasurer-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--gold-light); letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 20px; padding: 4px 12px;
+}
+
+/* ─── LOGIN ROLE TABS ────────────────────────────────────── */
+.login-role-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.role-tab {
+  flex: 1; padding: 9px; border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: none; color: var(--text2);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer;
+  transition: all 0.2s;
+}
+.role-tab.active { background: rgba(201,168,76,0.12); color: var(--gold-light); border-color: var(--gold-dim); }
+
+/* ─── PAY DUE NOTICE ─────────────────────────────────────── */
+.pay-due-notice {
+  background: rgba(201,168,76,0.08); border: 1px solid var(--gold-dim);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 13px; color: var(--gold-light); margin-bottom: 14px;
+}
+
+/* ─── OWNERS TABLE ───────────────────────────────────────── */
+.owners-table td { vertical-align: middle; }
+.owner-past-row td { opacity: 0.55; }
+.owner-name-cell  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.current-owner-tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  background: rgba(74,222,128,0.12); color: var(--paid-text);
+  border: 1px solid rgba(74,222,128,0.25); border-radius: 10px; padding: 2px 8px;
+}
+.past-owner-tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  background: rgba(90,91,112,0.3); color: var(--text3);
+  border: 1px solid var(--border2); border-radius: 10px; padding: 2px 8px;
+}
+.parking-tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  background: rgba(201,168,76,0.1); color: var(--gold-light);
+  border: 1px solid var(--gold-dim); border-radius: 10px; padding: 2px 8px;
+  margin-left: 6px;
+}
+.detail-text { font-size: 13px; color: var(--text2); }
+
+/* ─── OWNER FORM GRID ────────────────────────────────────── */
+.owner-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.owner-form-grid .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+/* ─── TRANSFER MODAL ─────────────────────────────────────── */
+.transfer-divider {
+  display: flex; gap: 16px; align-items: flex-start; margin-bottom: 8px;
+}
+.transfer-section { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.transfer-label   { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+.transfer-arrow   { font-size: 24px; color: var(--gold); padding-top: 28px; }
+.transfer-section .modal-input { margin-bottom: 0; }
+
+.auto-tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  background: rgba(78,205,196,0.1); color: var(--teal);
+  border: 1px solid rgba(78,205,196,0.25); border-radius: 10px;
+  padding: 2px 7px; margin-left: 6px; vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+  .page-tabs { padding: 0 16px; }
+  .balance-grid { grid-template-columns: repeat(3, 1fr); }
+  .owner-form-grid { grid-template-columns: 1fr; }
+  .transfer-divider { flex-direction: column; }
+  .transfer-arrow { display: none; }
+}
