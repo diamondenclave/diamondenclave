@@ -11,8 +11,8 @@ const CONFIG = {
   EMAILJS_PUBLIC_KEY:  "",
 
   // Airtable — 3 tables: Payments, Owners, Ledger
-  AIRTABLE_TOKEN:   "",
-  AIRTABLE_BASE_ID: "",
+  AIRTABLE_TOKEN:   "patEKk5dOQ5Bz2FoJ",
+  AIRTABLE_BASE_ID: "appiCieQ3AijrHoUe",
 
   // All flats + parking placeholders
   FLATS: [
