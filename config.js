@@ -6,9 +6,9 @@ const CONFIG = {
   ADMIN_PASSWORD:     "DEAdmin",
   TREASURER_PASSWORD: "DET2026",
 
-  EMAILJS_SERVICE_ID:  "",
-  EMAILJS_TEMPLATE_ID: "",
-  EMAILJS_PUBLIC_KEY:  "",
+  EMAILJS_SERVICE_ID:  "diamondenclave",
+  EMAILJS_TEMPLATE_ID: "template_7rpi1ts",
+  EMAILJS_PUBLIC_KEY:  "vSdCkNFabN9aUlHwG",
 
   // Airtable — 3 tables: Payments, Owners, Ledger
   AIRTABLE_TOKEN:   "patEKk5dOQ5Bz2FoJ",
