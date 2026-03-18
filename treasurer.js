@@ -86,7 +86,7 @@ function renderLedger() {
   tbody.innerHTML = "";
 
   if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:30px">No entries found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:30px">No ledger entries yet. Payments marked as paid will appear here automatically.</td></tr>`;
     return;
   }
 

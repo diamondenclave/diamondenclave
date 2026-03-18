@@ -26,6 +26,7 @@ let state = {
   }
   await Sheets.loadAll();
   renderTable(); renderStats(); renderYearly();
+  renderTreasurerTab(); // always render so ledger is ready when tab is clicked
 })();
 
 // ── Tab Switching ─────────────────────────────────────────────
@@ -34,8 +35,15 @@ function switchTab(tab) {
     document.getElementById("page_"+t)?.classList.toggle("hidden", t!==tab);
     document.getElementById("tab_" +t)?.classList.toggle("active", t===tab);
   });
-  if (tab==="treasurer") renderTreasurerTab();
-  if (tab==="owners")    renderOwnersTab();}
+  if (tab==="treasurer") {
+    if (Sheets.isConfigured()) {
+      Sheets.loadAll().then(() => renderTreasurerTab());
+    } else {
+      renderTreasurerTab();
+    }
+  }
+  if (tab==="owners") renderOwnersTab();
+}
 
 // ── Month Navigation ──────────────────────────────────────────
 function changeMonth(dir) {
