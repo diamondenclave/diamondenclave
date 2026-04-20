@@ -16,7 +16,7 @@
   <div class="header-diamond">◆</div>
   <div class="header-text">
     <h1 class="site-title">Diamond Enclave</h1>
-    <p class="site-subtitle">11/6, Narendranath Ghosh Lane, Kolkata-700040</p>
+    <p class="site-subtitle">Maintenance Management Portal</p>
   </div>
   <div class="header-actions">
     <div id="adminBadge"     class="admin-badge hidden"><span class="badge-dot"></span> Admin</div>
@@ -36,7 +36,7 @@
 <!-- PAGE TABS -->
 <div class="page-tabs">
   <button class="page-tab active" id="tab_payments"   onclick="switchTab('payments')">💳 Payments</button>
-  <button class="page-tab"        id="tab_treasurer"  onclick="switchTab('treasurer')">📒 Ledger</button>
+  <button class="page-tab"        id="tab_treasurer"  onclick="switchTab('treasurer')">📒 Treasurer</button>
   <button class="page-tab hidden" id="tab_owners"     onclick="switchTab('owners')">👤 Owners</button>
 </div>
 
@@ -351,6 +351,21 @@
     <div class="modal-buttons" style="margin-top:16px">
       <button class="btn-primary" onclick="confirmTransfer()">↔ Transfer</button>
       <button class="btn-ghost"   onclick="closeTransferModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- REFUSED TO PAY -->
+<div id="refusedModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond warn-diamond">!</div>
+    <h2 class="modal-title" id="refusedModalTitle">Mark as Refused</h2>
+    <p class="modal-sub" id="refusedModalSub">Mark this owner as refused to pay this month?</p>
+    <label class="modal-label">Reason (optional)</label>
+    <input type="text" id="refusedReasonInput" class="modal-input" placeholder="e.g. Disputed amount, Unavailable…"/>
+    <div class="modal-buttons">
+      <button class="btn-warn" onclick="confirmRefused()">Mark as Refused</button>
+      <button class="btn-ghost" onclick="closeRefusedModal()">Cancel</button>
     </div>
   </div>
 </div>
