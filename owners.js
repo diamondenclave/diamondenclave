@@ -17,19 +17,19 @@ function _renderOwnersTable() {
   tbody.innerHTML = "";
 
   CONFIG.FLATS.forEach(flat => {
-    const history = Sheets.getFlatHistory(flat.id);
+    const history    = Sheets.getFlatHistory(flat.id);
     const hasCurrent = history.some(o => !o.moveOut || o.moveOut === "");
 
     if (history.length === 0) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><span class="flat-badge">${flat.label}</span>
-          ${flat.parking ? ' <span class="parking-tag">Parking — TBD</span>' : ""}
+          ${flat.parking ? ' <span class="parking-tag">Parking</span>' : ""}
         </td>
         <td colspan="6" style="color:var(--text3);font-style:italic">
           ${flat.parking ? "Ownership & maintenance to be decided" : "No owner assigned yet"}
         </td>
-        <td>${!flat.parking ? `<button class="btn-pay" onclick="openAddOwnerModal('${flat.id}')">+ Add Owner</button>` : ""}</td>
+        <td><button class="btn-pay" onclick="openAddOwnerModal('${flat.id}')">+ Add Owner</button></td>
       `;
       tbody.appendChild(tr);
       return;
@@ -40,7 +40,9 @@ function _renderOwnersTable() {
       const tr = document.createElement("tr");
       tr.classList.toggle("owner-past-row", !isCurrent);
       tr.innerHTML = `
-        <td>${idx===0 ? `<span class="flat-badge">${flat.label}</span>` : ""}</td>
+        <td>
+          ${idx===0 ? `<span class="flat-badge">${flat.label}</span>${flat.parking?' <span class="parking-tag">Parking</span>':""}` : ""}
+        </td>
         <td>
           <div class="owner-name-cell">
             <span class="owner-name">${owner.name}</span>
@@ -62,13 +64,12 @@ function _renderOwnersTable() {
       tbody.appendChild(tr);
     });
 
-    // If all owners have moveOut (flat waiting for new owner after transfer)
     if (!hasCurrent) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td></td>
         <td colspan="6" style="color:var(--warn);font-style:italic;font-size:13px">⚠ Awaiting new owner assignment</td>
-        <td><button class="btn-pay" onclick="openAddOwnerModal('${flat.id}')">+ Add New Owner</button></td>
+        <td><button class="btn-pay" onclick="openAddOwnerModal('${flat.id}')">+ Add Owner</button></td>
       `;
       tbody.appendChild(tr);
     }

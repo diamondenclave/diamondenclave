@@ -122,10 +122,10 @@ function renderLedger() {
   const filter  = document.getElementById("ledgerFilter")?.value||"All";
   const canEdit = state.isTreasurer || state.isAdmin;
 
-  // All entries sorted by date — needed for running balance calculation
-  const allEntries = Sheets.getLedger(); // already sorted by date
+  // All entries in ASCENDING order for correct running balance calculation
+  const allEntries = [...Sheets.getLedger()].sort((a,b) => a.date.localeCompare(b.date));
 
-  // Build running balance map: entry.id -> balance after that entry
+  // Build running balance map: entry.id -> cumulative balance after that entry
   let running = 0;
   const balanceAfter = {};
   allEntries.forEach(e => {
@@ -133,13 +133,14 @@ function renderLedger() {
     balanceAfter[e.id] = running;
   });
 
-  // Apply search/filter for display
+  // Apply search/filter then sort DESCENDING to show latest first
   const entries = allEntries
     .filter(e => filter==="All" || e.type===filter)
     .filter(e => !search ||
       e.description.toLowerCase().includes(search) ||
       e.type.toLowerCase().includes(search) ||
-      String(e.amount).includes(search));
+      String(e.amount).includes(search))
+    .sort((a,b) => b.date.localeCompare(a.date)); // latest first
 
   const tbody = document.getElementById("ledgerBody");
   tbody.innerHTML = "";
@@ -222,7 +223,8 @@ async function confirmDeleteLedger() {
 
 // ── Export Ledger Excel ───────────────────────────────────────
 function exportLedgerExcel() {
-  const entries = Sheets.getLedger();
+  // Export in ascending order (chronological) for Excel
+  const entries = [...Sheets.getLedger()].sort((a,b) => a.date.localeCompare(b.date));
   const headers = ["Date","Type","Description","Amount (₹)","Balance (₹)","Added By"];
   let credit=0, debit=0, running=0;
   const rows = entries.map(e => {

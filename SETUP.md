@@ -28,6 +28,7 @@ Sign up free at https://airtable.com → Create a base named **Diamond Enclave**
 | PaymentDate | Single line text |
 | AmountPaid | Number (0 decimals) |
 | LedgerRef | Single line text |
+| Reason | Single line text |
 
 ### Table 2: Owners
 | Field Name | Type |

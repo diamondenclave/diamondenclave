@@ -6,11 +6,13 @@ const MONTHS = ["January","February","March","April","May","June",
 
 let state = {
   isAdmin:false, isTreasurer:false, loginRole:"admin",
-  currentYear:CONFIG.START_YEAR, currentMonth:CONFIG.START_MONTH,
+  currentYear:  new Date().getFullYear(),
+  currentMonth: new Date().getMonth() + 1,
   pendingFlat:null, revokeFlat:null, receiptFlat:null, billFlat:null,
   deleteLedgerId:null,
   ownerModalMode:null, ownerFlatId:null, ownerRecordId:null,
   transferFlatId:null, transferCurrentId:null,
+  refusedFlat:null,
 };
 
 // ── Init ──────────────────────────────────────────────────────
@@ -64,43 +66,59 @@ function renderTable() {
   document.getElementById("actionHeader").classList.toggle("hidden", !state.isAdmin);
 
   CONFIG.FLATS.filter(f=>!f.parking).forEach(flat => {
-    const rec      = md[flat.id]||{paid:false,date:"",amount:0};
-    const isPaid   = rec.paid;
-    const owner    = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
-    const bal      = Sheets.calcBalance(flat.id, state.currentYear, state.currentMonth);
-    const balBefore= Sheets.calcBalanceBefore(flat.id, state.currentYear, state.currentMonth);
-    const due      = flat.charge - balBefore;              // what was owed entering this month
+    const rec       = md[flat.id]||{paid:false,refused:false,date:"",amount:0};
+    const isPaid    = rec.paid;
+    const isRefused = rec.refused;
+    const owner     = Sheets.getCurrentOwner(flat.id, state.currentYear, state.currentMonth);
+    const bal       = Sheets.calcBalance(flat.id, state.currentYear, state.currentMonth);
+    const balBefore = Sheets.calcBalanceBefore(flat.id, state.currentYear, state.currentMonth);
+    const due       = flat.charge - balBefore;
 
     const balHtml = bal===0 ? `<span class="bal-neutral">₹0</span>`
       : bal>0 ? `<span class="bal-credit">+₹${bal} credit</span>`
       :         `<span class="bal-due">-₹${Math.abs(bal)} due</span>`;
 
-    // Due this month: if already paid → Nil, else show adjusted due
     const dueHtml = isPaid
       ? `<span class="bal-credit">Nil</span>`
       : due <= 0
         ? `<span class="bal-credit">Nil</span>`
         : `₹${due}`;
 
+    // Status badge — 3 states: PAID, REFUSED, PENDING
+    let statusBadge;
+    if (isPaid)    statusBadge = `<span class="status-badge status-paid">PAID</span>`;
+    else if (isRefused) statusBadge = `<span class="status-badge status-refused" title="${rec.reason||""}">REFUSED${rec.reason?" ⓘ":""}</span>`;
+    else           statusBadge = `<span class="status-badge status-pending">PENDING</span>`;
+
     let actionCell = "";
     if (state.isAdmin) {
-      const payBtn  = isPaid
-        ? `<button class="btn-revoke" onclick="openRevokeModal('${flat.id}')">✕ Revoke</button>`
-        : `<button class="btn-pay"    onclick="openPaymentModal('${flat.id}',${due})">✓ Mark Paid</button>`;
+      let payBtn, refuseBtn;
+      if (isPaid) {
+        payBtn    = `<button class="btn-revoke" onclick="openRevokeModal('${flat.id}')">✕ Revoke</button>`;
+        refuseBtn = "";
+      } else if (isRefused) {
+        payBtn    = `<button class="btn-pay" onclick="openPaymentModal('${flat.id}',${due})">✓ Mark Paid</button>`;
+        refuseBtn = `<button class="btn-revoke" onclick="clearRefused('${flat.id}')">✕ Clear</button>`;
+      } else {
+        payBtn    = `<button class="btn-pay"    onclick="openPaymentModal('${flat.id}',${due})">✓ Mark Paid</button>`;
+        refuseBtn = `<button class="btn-refused" onclick="openRefusedModal('${flat.id}')">✗ Refused</button>`;
+      }
       const email   = owner?.email||"";
-      const billBtn = email
+      const billBtn = email && !isRefused
         ? `<button class="btn-bill" onclick="openSendBillModal('${flat.id}')">✉ Bill</button>`
         : "";
-      actionCell = `<div class="action-group">${payBtn}${billBtn}</div>`;
+      actionCell = `<div class="action-group">${payBtn}${refuseBtn}${billBtn}</div>`;
     }
+
     const tr = document.createElement("tr");
+    tr.classList.toggle("refused-row", isRefused);
     tr.innerHTML = `
       <td><span class="flat-badge">${flat.label}</span></td>
       <td><span class="owner-name">${owner?owner.name:"—"}</span></td>
       <td><span class="amount-text">₹${flat.charge}</span></td>
       <td>${balHtml}</td>
       <td>${dueHtml}</td>
-      <td><span class="status-badge ${isPaid?"status-paid":"status-pending"}">${isPaid?"PAID":"PENDING"}</span></td>
+      <td>${statusBadge}</td>
       <td><span class="amount-text" style="font-size:15px">${isPaid&&rec.amount?"₹"+rec.amount:"—"}</span></td>
       <td><span class="date-text">${isPaid&&rec.date?formatDate(rec.date):"—"}</span></td>
       <td class="${state.isAdmin?"":"hidden"}">${actionCell}</td>
@@ -310,12 +328,44 @@ async function confirmSendReceipt(){
   showToast(ok?`✉ Receipt sent to ${email}`:`✓ Paid — receipt failed`);
 }
 
+// ── Refused Modal ─────────────────────────────────────────────
+function openRefusedModal(flatId){
+  state.refusedFlat = flatId;
+  const flat  = getFlatCfg(flatId);
+  const owner = Sheets.getCurrentOwner(flatId, state.currentYear, state.currentMonth);
+  document.getElementById("refusedModalTitle").textContent = `Mark Refused — ${flat.label}`;
+  document.getElementById("refusedModalSub").textContent   = `Owner: ${owner?owner.name:"—"}`;
+  document.getElementById("refusedReasonInput").value      = "";
+  document.getElementById("refusedModal").classList.remove("hidden");
+}
+function closeRefusedModal(){
+  document.getElementById("refusedModal").classList.add("hidden");
+  state.refusedFlat = null;
+}
+async function confirmRefused(){
+  if(!state.refusedFlat) return;
+  const reason = document.getElementById("refusedReasonInput").value.trim();
+  await Sheets.markRefused(state.currentYear, state.currentMonth, state.refusedFlat, reason);
+  closeRefusedModal(); renderTable(); renderStats();
+  if(typeof renderTreasurerTab==="function") renderTreasurerTab();
+  showToast(`⚠ Flat ${state.refusedFlat} marked as refused`);
+}
+async function clearRefused(flatId){
+  // Reset to pending
+  await Sheets.markRefused(state.currentYear, state.currentMonth, flatId, "");
+  const mk = Sheets.monthKey(state.currentYear, state.currentMonth);
+  // Actually just clear — set back to plain pending
+  await Sheets.markPaid(state.currentYear, state.currentMonth, flatId, "", false, 0);
+  renderTable(); renderStats();
+  showToast(`Refused status cleared for Flat ${flatId}`);
+}
+
 // ── Close modals on backdrop ──────────────────────────────────
 function closeModalOutside(e){
   if(e.target!==e.currentTarget) return;
   closeLoginModal(); closePaymentModal(); closeRevokeModal();
   closeSendBillModal(); closeReceiptModal(); closeDeleteLedgerModal();
-  closeOwnerModal(); closeTransferModal();
+  closeOwnerModal(); closeTransferModal(); closeRefusedModal();
 }
 
 // ── Excel Export ──────────────────────────────────────────────
@@ -333,7 +383,7 @@ function exportExcel(){
     const own=Sheets.getCurrentOwner(flat.id,state.currentYear,state.currentMonth);
     const bal=Sheets.calcBalance(flat.id);
     let tp=0;
-    const sc=months.map(({y,m})=>{const r=(all[Sheets.monthKey(y,m)]||{})[flat.id]||{};if(r.paid)tp++;return r.paid?`Paid (${formatDate(r.date)})`:"Pending";});
+    const sc=months.map(({y,m})=>{const r=(all[Sheets.monthKey(y,m)]||{})[flat.id]||{};if(r.paid)tp++;return r.paid?`Paid (${formatDate(r.date)})`:r.refused?"Refused":"Pending";});
     const ac=months.map(({y,m})=>{const r=(all[Sheets.monthKey(y,m)]||{})[flat.id]||{};return r.paid?(r.amount||flat.charge):"";});
     return[flat.label,own?own.name:"—",bal,...sc,...ac,tp];
   });

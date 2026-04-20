@@ -50,9 +50,11 @@ const Sheets = (() => {
       const fk = flatKey(f.Year, f.Month, f.FlatID);
       if (!_payments[mk]) _payments[mk] = {};
       _payments[mk][f.FlatID] = {
-        paid:      f.Status === "Paid",
-        date:      f.PaymentDate || "",
-        amount:    Number(f.AmountPaid) || 0,
+        paid:     f.Status === "Paid",
+        refused:  f.Status === "Refused",
+        date:     f.PaymentDate || "",
+        amount:   Number(f.AmountPaid) || 0,
+        reason:   f.Reason || "",
         recordId:  rec.id,
         ledgerRef: f.LedgerRef || "",
       };
@@ -83,7 +85,7 @@ const Sheets = (() => {
       amount:      Number(rec.fields.Amount) || 0,
       description: rec.fields.Description || "",
       addedBy:     rec.fields.AddedBy     || "",
-    })).sort((a,b) => a.date.localeCompare(b.date));
+    })).sort((a,b) => b.date.localeCompare(a.date)); // descending — latest first
   }
 
   // ── PAYMENTS ─────────────────────────────────────────────
@@ -162,7 +164,38 @@ const Sheets = (() => {
     } catch(e) { console.warn("Airtable payment write failed:", e); }
   }
 
-  // ── BALANCE CALCULATION ───────────────────────────────────
+  async function markRefused(year, month, flatId, reason) {
+    const mk = monthKey(year, month);
+    const fk = flatKey(year, month, flatId);
+
+    // If previously paid, remove ledger entry first
+    const existing = (_payments[mk]||{})[flatId];
+    if (existing && existing.ledgerRef) {
+      await deleteLedgerEntry(existing.ledgerRef);
+    }
+
+    if (!_payments[mk]) _payments[mk] = {};
+    _payments[mk][flatId] = { paid: false, refused: true, date: "", amount: 0, reason: reason||"" };
+    _saveLocal();
+
+    if (!isConfigured()) return;
+    try {
+      const fields = { FlatID: flatId, Year: year, Month: month,
+                       Status: "Refused", PaymentDate: "", AmountPaid: 0,
+                       Reason: reason||"", LedgerRef: "" };
+      const existId = _payRecs[fk];
+      if (existId) {
+        await fetch(`${_url("Payments")}/${existId}`,
+          { method:"PATCH", headers:_hdr(), body:JSON.stringify({fields}) });
+      } else {
+        const res  = await fetch(_url("Payments"),
+          { method:"POST", headers:_hdr(), body:JSON.stringify({fields}) });
+        const data = await res.json();
+        if (data.id) _payRecs[fk] = data.id;
+      }
+      _saveLocal();
+    } catch(e) { console.warn("Airtable refused write failed:", e); }
+  }
 
   // Count how many months have passed from START up to and including (upToYear, upToMonth)
   function _monthsElapsed(upToYear, upToMonth) {
@@ -371,7 +404,7 @@ const Sheets = (() => {
 
   return {
     loadAll, isConfigured, monthKey,
-    getMonth, getAllData, markPaid, calcBalance, calcBalanceBefore,
+    getMonth, getAllData, markPaid, markRefused, calcBalance, calcBalanceBefore,
     getOwners, getCurrentOwner, getFlatHistory,
     addOwner, updateOwner, transferOwnership, getEmail,
     getLedger, addLedgerEntry, deleteLedgerEntry, linkLedgerRef,
