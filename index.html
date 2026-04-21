@@ -33,16 +33,6 @@
   <a href="SETUP.md" target="_blank">Setup Guide →</a>
 </div>
 
-<!-- NEW FY PROMPT BANNER -->
-<div id="fyPromptBanner" class="fy-banner hidden">
-  <span id="fyPromptLabel">New Financial Year — Record opening balance?</span>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn-primary" onclick="recordOpeningBalance()">📒 Record Opening Balance</button>
-    <button class="btn-primary" onclick="sendAnnualReport()">📧 Send Annual Report</button>
-    <button class="btn-ghost"   onclick="document.getElementById('fyPromptBanner').classList.add('hidden')">Dismiss</button>
-  </div>
-</div>
-
 <!-- PAGE TABS -->
 <div class="page-tabs">
   <button class="page-tab active" id="tab_payments"  onclick="switchTab('payments')">💳 Payments</button>
@@ -153,16 +143,13 @@
   <!-- Ledger table -->
   <section class="table-section">
     <div class="ledger-controls">
-      <input type="text" id="ledgerSearch" class="form-input" placeholder="🔍 Search…" oninput="renderLedger()" style="max-width:260px"/>
+      <input type="text" id="ledgerSearch" class="form-input" placeholder="Search..." oninput="renderLedger()" style="max-width:260px"/>
       <select id="ledgerFilter" class="form-select" onchange="renderLedger()" style="max-width:160px">
         <option value="All">All Entries</option>
         <option value="Credit">Credits Only</option>
         <option value="Debit">Debits Only</option>
       </select>
-      <button class="btn-primary" onclick="exportLedgerExcel()">⬇ Download Excel</button>
-      <button id="annualReportBtn"   class="btn-outline hidden" onclick="sendAnnualReport()">📧 Annual Report</button>
-      <button id="openingBalanceBtn" class="btn-outline hidden" onclick="recordOpeningBalance()">📒 Opening Balance</button>
-      <button id="purgeDataBtn"      class="btn-outline hidden" style="color:var(--warn);border-color:var(--warn-dim)" onclick="purgeOldData()">🗑 Purge Old Data</button>
+      <button class="btn-primary" onclick="exportLedgerExcel()">Download Excel</button>
     </div>
     <div class="table-wrapper">
       <table class="payment-table">

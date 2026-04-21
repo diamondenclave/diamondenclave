@@ -30,21 +30,7 @@ let state = {
   await Sheets.loadAll();
   renderTable(); renderStats(); renderYearly();
   renderTreasurerTab();
-  // Check if 1st April — prompt for opening balance
-  _checkNewFYPrompt();
 })();
-
-function _checkNewFYPrompt() {
-  const now=new Date();
-  if(now.getMonth()===3&&now.getDate()===1) {  // April 1
-    const fy=Sheets.getCurrentFY();
-    const already=Sheets.getLedger().find(e=>e.description&&e.description.includes(`Opening Balance FY ${fy.label}`));
-    if(!already) {
-      document.getElementById("fyPromptBanner").classList.remove("hidden");
-      document.getElementById("fyPromptLabel").textContent=`New Financial Year ${fy.label} — Record opening balance and send annual report?`;
-    }
-  }
-}
 
 // ── Tab Switching ─────────────────────────────────────────────
 function switchTab(tab) {
