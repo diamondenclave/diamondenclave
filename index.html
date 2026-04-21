@@ -16,7 +16,7 @@
   <div class="header-diamond">◆</div>
   <div class="header-text">
     <h1 class="site-title">Diamond Enclave</h1>
-    <p class="site-subtitle">Maintenance Management Portal</p>
+    <p class="site-subtitle">11/6, Narendra Nath Ghosh Lane, Kolkata-700040</p>
   </div>
   <div class="header-actions">
     <div id="adminBadge"     class="admin-badge hidden"><span class="badge-dot"></span> Admin</div>
@@ -33,16 +33,24 @@
   <a href="SETUP.md" target="_blank">Setup Guide →</a>
 </div>
 
-<!-- PAGE TABS -->
-<div class="page-tabs">
-  <button class="page-tab active" id="tab_payments"   onclick="switchTab('payments')">💳 Payments</button>
-  <button class="page-tab"        id="tab_treasurer"  onclick="switchTab('treasurer')">📒 Treasurer</button>
-  <button class="page-tab hidden" id="tab_owners"     onclick="switchTab('owners')">👤 Owners</button>
+<!-- NEW FY PROMPT BANNER -->
+<div id="fyPromptBanner" class="fy-banner hidden">
+  <span id="fyPromptLabel">New Financial Year — Record opening balance?</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-primary" onclick="recordOpeningBalance()">📒 Record Opening Balance</button>
+    <button class="btn-primary" onclick="sendAnnualReport()">📧 Send Annual Report</button>
+    <button class="btn-ghost"   onclick="document.getElementById('fyPromptBanner').classList.add('hidden')">Dismiss</button>
+  </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     PAYMENTS PAGE
-══════════════════════════════════════════════ -->
+<!-- PAGE TABS -->
+<div class="page-tabs">
+  <button class="page-tab active" id="tab_payments"  onclick="switchTab('payments')">💳 Payments</button>
+  <button class="page-tab"        id="tab_treasurer" onclick="switchTab('treasurer')">📒 Ledger</button>
+  <button class="page-tab hidden" id="tab_owners"    onclick="switchTab('owners')">👤 Owners</button>
+</div>
+
+<!-- ══════════ PAYMENTS PAGE ══════════ -->
 <main class="main-content" id="page_payments">
   <section class="stats-row">
     <div class="stat-card"><div class="stat-value">9</div><div class="stat-label">Total Flats</div></div>
@@ -53,10 +61,11 @@
   <section class="controls-row">
     <div class="month-nav">
       <button class="nav-arrow" onclick="changeMonth(-1)">&#8592;</button>
-      <div class="month-display" id="monthDisplay">March 2026</div>
+      <div class="month-display" id="monthDisplay">Loading…</div>
       <button class="nav-arrow" onclick="changeMonth(1)">&#8594;</button>
     </div>
     <div class="control-buttons">
+      <button id="updateChargesBtn" class="btn-outline hidden" onclick="openChargeModal()">⚙ Update Charges</button>
       <button class="btn-primary" onclick="exportExcel()">⬇ Download Excel</button>
     </div>
   </section>
@@ -83,28 +92,27 @@
   </section>
 </main>
 
-<!-- ══════════════════════════════════════════════
-     TREASURER PAGE
-══════════════════════════════════════════════ -->
+<!-- ══════════ LEDGER PAGE ══════════ -->
 <main class="main-content hidden" id="page_treasurer">
-  <!-- Stats — visible to everyone -->
   <section class="stats-row">
     <div class="stat-card accent"><div class="stat-value" id="ledgerCredit">—</div><div class="stat-label">Total Credits (₹)</div></div>
     <div class="stat-card warn"><div class="stat-value" id="ledgerDebit">—</div><div class="stat-label">Total Debits (₹)</div></div>
     <div class="stat-card gold"><div class="stat-value" id="ledgerBalance">—</div><div class="stat-label">Net Balance (₹)</div></div>
     <div class="stat-card"><div class="stat-value" id="ledgerEntries">—</div><div class="stat-label">Entries</div></div>
   </section>
-
-  <!-- Per-flat balance — visible to everyone -->
   <section class="balance-section">
     <div class="section-header">
       <h3 class="section-title">Per-Flat Running Balance</h3>
-      <p class="section-sub">Positive = credit (overpaid) · Negative = due (underpaid) · Balance carries forward on ownership transfer</p>
+      <p class="section-sub">Positive = credit · Negative = due · Balance carries forward on ownership transfer</p>
     </div>
     <div class="balance-grid" id="balanceGrid"></div>
   </section>
-
-  <!-- Add entry — TREASURER / ADMIN only -->
+  <!-- Sync banner -->
+  <div id="syncLedgerBanner" class="sync-banner hidden">
+    ⚠ <strong>Missing ledger entries detected</strong><span id="syncBannerMsg"></span>
+    <button class="btn-primary" onclick="syncMissingLedgerEntries()">🔄 Sync Now</button>
+  </div>
+  <!-- Add entry — Treasurer/Admin only -->
   <section class="add-entry-section" id="addEntrySection" style="display:none">
     <div class="section-header"><h3 class="section-title">Add Ledger Entry</h3></div>
     <div class="entry-form">
@@ -128,7 +136,7 @@
       <div class="entry-form-row">
         <div class="form-group form-group-wide">
           <label class="form-label">Description</label>
-          <input type="text" id="entryDesc" class="form-input" placeholder="e.g. Electricity bill payment, Cleaning charges…"/>
+          <input type="text" id="entryDesc" class="form-input" placeholder="e.g. Electricity bill, Cleaning charges…"/>
         </div>
         <div class="form-group">
           <label class="form-label">&nbsp;</label>
@@ -137,23 +145,12 @@
       </div>
     </div>
   </section>
-
-  <!-- Sync missing entries — ADMIN only, one-time use -->
-  <div id="syncLedgerBanner" class="sync-banner hidden">
-    <div>
-      <strong>⚠ Missing ledger entries detected</strong>
-      <span id="syncBannerMsg"> — some past payments have no ledger credit entry.</span>
-    </div>
-    <button class="btn-primary" onclick="syncMissingLedgerEntries()">🔄 Sync Now</button>
-  </div>
-
-  <!-- Treasurer login prompt — shown to public -->
+  <!-- Login prompt for public -->
   <div id="treasurerLoginPrompt" class="treasurer-login-prompt">
     <span>🔒 Login as Treasurer to add or edit entries</span>
     <button class="btn-outline" onclick="openLoginModal('treasurer')">Treasurer Login</button>
   </div>
-
-  <!-- Ledger table — visible to everyone, download for everyone -->
+  <!-- Ledger table -->
   <section class="table-section">
     <div class="ledger-controls">
       <input type="text" id="ledgerSearch" class="form-input" placeholder="🔍 Search…" oninput="renderLedger()" style="max-width:260px"/>
@@ -163,6 +160,9 @@
         <option value="Debit">Debits Only</option>
       </select>
       <button class="btn-primary" onclick="exportLedgerExcel()">⬇ Download Excel</button>
+      <button id="annualReportBtn"   class="btn-outline hidden" onclick="sendAnnualReport()">📧 Annual Report</button>
+      <button id="openingBalanceBtn" class="btn-outline hidden" onclick="recordOpeningBalance()">📒 Opening Balance</button>
+      <button id="purgeDataBtn"      class="btn-outline hidden" style="color:var(--warn);border-color:var(--warn-dim)" onclick="purgeOldData()">🗑 Purge Old Data</button>
     </div>
     <div class="table-wrapper">
       <table class="payment-table">
@@ -177,9 +177,7 @@
   </section>
 </main>
 
-<!-- ══════════════════════════════════════════════
-     OWNERS PAGE
-══════════════════════════════════════════════ -->
+<!-- ══════════ OWNERS PAGE ══════════ -->
 <main class="main-content hidden" id="page_owners">
   <div id="ownersLocked">
     <div class="locked-box">
@@ -191,13 +189,13 @@
   </div>
   <div id="ownersContent" class="hidden">
     <div class="section-header" style="margin-bottom:20px">
-      <h3 class="section-title">Flat Owner Registry</h3>
-      <p class="section-sub">Full ownership history per flat · Parking slots G1 &amp; G2 pending assignment</p>
+      <h3 class="section-title">Flat &amp; Parking Owner Registry</h3>
+      <p class="section-sub">Full ownership history · Parking G1 &amp; G2 included</p>
     </div>
     <div class="table-wrapper">
       <table class="payment-table owners-table">
         <thead><tr>
-          <th>Flat</th><th>Owner Name</th><th>Email</th>
+          <th>Unit</th><th>Owner Name</th><th>Email</th>
           <th>Phone</th><th>Move-in</th><th>Move-out</th><th>Status</th><th>Actions</th>
         </tr></thead>
         <tbody id="ownersTableBody"></tbody>
@@ -206,9 +204,7 @@
   </div>
 </main>
 
-<!-- ══════════════════════════════════════════════
-     MODALS
-══════════════════════════════════════════════ -->
+<!-- ══════════ MODALS ══════════ -->
 
 <!-- LOGIN -->
 <div id="loginModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
@@ -247,6 +243,19 @@
   </div>
 </div>
 
+<!-- DUPLICATE / OVERWRITE CONFIRMATION -->
+<div id="overwriteModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond" style="color:var(--gold)">⚠</div>
+    <h2 class="modal-title">Already Paid</h2>
+    <p class="modal-sub" id="overwriteSub">This flat already has a payment this month. Overwrite?</p>
+    <div class="modal-buttons">
+      <button class="btn-warn"  onclick="confirmOverwrite()">Yes, Overwrite</button>
+      <button class="btn-ghost" onclick="closeOverwriteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- REVOKE -->
 <div id="revokeModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
   <div class="modal-box">
@@ -256,6 +265,21 @@
     <div class="modal-buttons">
       <button class="btn-warn" onclick="confirmRevoke()">Revoke</button>
       <button class="btn-ghost" onclick="closeRevokeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- REFUSED -->
+<div id="refusedModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-diamond warn-diamond">✗</div>
+    <h2 class="modal-title" id="refusedModalTitle">Mark as Refused</h2>
+    <p class="modal-sub"    id="refusedModalSub"></p>
+    <label class="modal-label">Reason (optional)</label>
+    <input type="text" id="refusedReasonInput" class="modal-input" placeholder="e.g. Disputed amount, Unavailable…"/>
+    <div class="modal-buttons">
+      <button class="btn-warn" onclick="confirmRefused()">✗ Mark Refused</button>
+      <button class="btn-ghost" onclick="closeRefusedModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -291,32 +315,35 @@
   </div>
 </div>
 
+<!-- UPDATE CHARGES -->
+<div id="chargeModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-diamond" style="color:var(--gold)">⚙</div>
+    <h2 class="modal-title">Update Monthly Charges</h2>
+    <p class="modal-sub">Changes apply from the selected month onwards. Previous data is preserved.</p>
+    <div id="chargeFormList" class="email-form-list"></div>
+    <div class="form-group" style="margin-top:16px">
+      <label class="modal-label">Effective From (Month)</label>
+      <input type="month" id="chargeEffectiveFrom" class="modal-input"/>
+    </div>
+    <div class="modal-buttons" style="margin-top:16px">
+      <button class="btn-primary" onclick="confirmChargeUpdate()">💾 Save Changes</button>
+      <button class="btn-ghost"   onclick="closeChargeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD / EDIT OWNER -->
 <div id="ownerModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
   <div class="modal-box modal-box-wide">
     <div class="modal-diamond">◆</div>
     <h2 class="modal-title" id="ownerModalTitle">Add Owner</h2>
     <div class="owner-form-grid">
-      <div class="form-group">
-        <label class="modal-label">Full Name *</label>
-        <input type="text" id="ownerName"  class="modal-input" placeholder="e.g. Ramesh Kumar"/>
-      </div>
-      <div class="form-group">
-        <label class="modal-label">Email</label>
-        <input type="email" id="ownerEmail" class="modal-input" placeholder="owner@email.com"/>
-      </div>
-      <div class="form-group">
-        <label class="modal-label">Phone</label>
-        <input type="tel"  id="ownerPhone" class="modal-input" placeholder="e.g. 9876543210"/>
-      </div>
-      <div class="form-group" id="ownerMoveInGroup">
-        <label class="modal-label">Move-in Month *</label>
-        <input type="month" id="ownerMoveIn" class="modal-input"/>
-      </div>
-      <div class="form-group hidden" id="ownerMoveOutGroup">
-        <label class="modal-label">Move-out Month</label>
-        <input type="month" id="ownerMoveOut" class="modal-input"/>
-      </div>
+      <div class="form-group"><label class="modal-label">Full Name *</label><input type="text"  id="ownerName"  class="modal-input" placeholder="e.g. Ramesh Kumar"/></div>
+      <div class="form-group"><label class="modal-label">Email</label>      <input type="email" id="ownerEmail" class="modal-input" placeholder="owner@email.com"/></div>
+      <div class="form-group"><label class="modal-label">Phone</label>      <input type="tel"   id="ownerPhone" class="modal-input" placeholder="9876543210"/></div>
+      <div class="form-group" id="ownerMoveInGroup"><label class="modal-label">Move-in Month *</label><input type="month" id="ownerMoveIn" class="modal-input"/></div>
+      <div class="form-group hidden" id="ownerMoveOutGroup"><label class="modal-label">Move-out Month</label><input type="month" id="ownerMoveOut" class="modal-input"/></div>
     </div>
     <div id="ownerModalError" class="modal-error hidden">Please fill in all required fields.</div>
     <div class="modal-buttons" style="margin-top:16px">
@@ -334,16 +361,16 @@
     <p class="modal-sub"  id="transferModalSub"></p>
     <div class="transfer-divider">
       <div class="transfer-section">
-        <p class="transfer-label">Current Owner Move-out Month *</p>
+        <p class="transfer-label">Current Owner Move-out *</p>
         <input type="month" id="transferMoveOut" class="modal-input"/>
       </div>
       <div class="transfer-arrow">→</div>
       <div class="transfer-section">
         <p class="transfer-label">New Owner Details</p>
-        <input type="text"  id="transferName"    class="modal-input" placeholder="New Owner Name *"/>
-        <input type="email" id="transferEmail"   class="modal-input" placeholder="Email"/>
-        <input type="tel"   id="transferPhone"   class="modal-input" placeholder="Phone"/>
-        <input type="month" id="transferMoveIn"  class="modal-input" title="New owner move-in month *"/>
+        <input type="text"  id="transferName"   class="modal-input" placeholder="New Owner Name *"/>
+        <input type="email" id="transferEmail"  class="modal-input" placeholder="Email"/>
+        <input type="tel"   id="transferPhone"  class="modal-input" placeholder="Phone"/>
+        <input type="month" id="transferMoveIn" class="modal-input" title="New owner move-in *"/>
         <p style="font-size:11px;color:var(--text3);margin-top:4px">Move-in month for new owner</p>
       </div>
     </div>
@@ -351,21 +378,6 @@
     <div class="modal-buttons" style="margin-top:16px">
       <button class="btn-primary" onclick="confirmTransfer()">↔ Transfer</button>
       <button class="btn-ghost"   onclick="closeTransferModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- REFUSED TO PAY -->
-<div id="refusedModal" class="modal-overlay hidden" onclick="closeModalOutside(event)">
-  <div class="modal-box">
-    <div class="modal-diamond warn-diamond">!</div>
-    <h2 class="modal-title" id="refusedModalTitle">Mark as Refused</h2>
-    <p class="modal-sub" id="refusedModalSub">Mark this owner as refused to pay this month?</p>
-    <label class="modal-label">Reason (optional)</label>
-    <input type="text" id="refusedReasonInput" class="modal-input" placeholder="e.g. Disputed amount, Unavailable…"/>
-    <div class="modal-buttons">
-      <button class="btn-warn" onclick="confirmRefused()">Mark as Refused</button>
-      <button class="btn-ghost" onclick="closeRefusedModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -395,8 +407,13 @@
 <script src="treasurer.js"></script>
 <script src="owners.js"></script>
 <script>
-  if (CONFIG.EMAILJS_PUBLIC_KEY && CONFIG.EMAILJS_PUBLIC_KEY.trim())
-    emailjs.init({ publicKey: CONFIG.EMAILJS_PUBLIC_KEY });
+  if(CONFIG.EMAILJS_PUBLIC_KEY&&CONFIG.EMAILJS_PUBLIC_KEY.trim())
+    emailjs.init({publicKey:CONFIG.EMAILJS_PUBLIC_KEY});
+  // Show update charges button only for admin
+  document.addEventListener("DOMContentLoaded",()=>{
+    const btn=document.getElementById("updateChargesBtn");
+    // Will be shown/hidden by _updateAuthUI
+  });
 </script>
 </body>
 </html>

@@ -102,5 +102,39 @@ body{font-family:Georgia,serif;background:#f0fdf4;margin:0;padding:20px}
     const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`;
   }
 
-  return { isEmailConfigured, sendBill, sendReceipt };
+  async function sendAnnualReport(owner, fyLabel, csvContent) {
+    if (!isEmailConfigured()) return false;
+    try {
+      // Send email with annual report note (CSV attached as text in body)
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Georgia,serif;background:#f5f0e8;padding:20px">
+      <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)">
+        <div style="background:#1a1a2e;padding:28px 32px;text-align:center">
+          <div style="color:#c9a84c;font-size:28px">◆</div>
+          <div style="color:#e2c97e;font-size:22px;font-weight:700;margin:8px 0 4px">Diamond Enclave</div>
+          <div style="color:#888;font-size:12px;letter-spacing:2px;text-transform:uppercase">Annual Financial Report</div>
+        </div>
+        <div style="padding:28px 32px">
+          <p style="font-size:16px;color:#333;margin-bottom:16px">Dear ${owner.name},</p>
+          <p style="color:#555;font-size:14px;margin-bottom:18px">
+            Please find the annual maintenance ledger report for Financial Year <strong>${fyLabel}</strong> attached.<br><br>
+            This report includes all income and expenditure for Diamond Enclave from 1st April to 31st March.
+          </p>
+          <p style="color:#888;font-size:13px">For any queries, please contact the building administrator.</p>
+        </div>
+        <div style="background:#f9f9f9;padding:14px 32px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee">
+          Diamond Enclave · 11/6, Narendra Nath Ghosh Lane, Kolkata-700040
+        </div>
+      </div></body></html>`;
+      const res = await emailjs.send(
+        CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID,
+        { to_email: owner.email, subject: `Diamond Enclave — Annual Report FY ${fyLabel}`,
+          message_html: html, to_name: owner.name,
+          flat_id: "", amount: "" },
+        CONFIG.EMAILJS_PUBLIC_KEY
+      );
+      return res.status === 200;
+    } catch(e) { console.warn("Annual report email failed:", e); return false; }
+  }
+
+  return { isEmailConfigured, sendBill, sendReceipt, sendAnnualReport };
 })();

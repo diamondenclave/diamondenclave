@@ -897,3 +897,22 @@ body {
   .transfer-divider { flex-direction: column; }
   .transfer-arrow { display: none; }
 }
+
+/* ─── FY BANNER ──────────────────────────────────────────── */
+.fy-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(78,205,196,0.08); border-bottom: 1px solid var(--teal-dim);
+  padding: 12px 40px; font-size: 13px; color: var(--teal);
+  gap: 12px; flex-wrap: wrap;
+}
+
+/* ─── YEARLY TABLE REFUSED ───────────────────────────────── */
+.y-refused { color: var(--warn); font-weight: 600; }
+
+/* ─── CHARGE FORM ────────────────────────────────────────── */
+.charge-form-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.charge-form-row:last-child { border-bottom: none; }
+.charge-flat-info { flex: 0 0 160px; text-align: left; }
