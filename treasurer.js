@@ -231,9 +231,9 @@ async function sendAnnualReport(){
       ];
     });
   rows.push([]);
-  rows.push(["","","Total Credits (₹)",  credit,        "","]);
-  rows.push(["","","Total Debits (₹)",   debit,         "","]);
-  rows.push(["","","Net Balance (₹)",    credit-debit,  "","]);
+  rows.push(["","","Total Credits (Rs.)",  credit,       "", ""]);
+  rows.push(["","","Total Debits (Rs.)",   debit,        "", ""]);
+  rows.push(["","","Net Balance (Rs.)",    credit-debit, "", ""]);
 
   const csv = [headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
 
