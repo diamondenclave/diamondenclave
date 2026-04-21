@@ -88,9 +88,9 @@ const Sheets = (() => {
     }));
     // Sort: by date ASC, then createdAt ASC (insertion order for same day)
     _ledger.sort((a,b) => {
-      const dateCmp = (a.date||"").localeCompare(b.date||"");
+      const dateCmp = a.date.localeCompare(b.date);
       if (dateCmp !== 0) return dateCmp;
-      return (a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||"");
+      return a.createdAt.localeCompare(b.createdAt);
     });
   }
 
@@ -329,8 +329,8 @@ const Sheets = (() => {
     _ledger.push(opt);
     // Re-sort after adding
     _ledger.sort((a,b)=>{
-      const dc=(a.date||"").localeCompare(b.date||"");
-      return dc!==0?dc:(a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||"");
+      const dc=a.date.localeCompare(b.date);
+      return dc!==0?dc:a.createdAt.localeCompare(b.createdAt);
     });
     _saveLocal();
     if (!isConfigured()) return opt;
@@ -387,45 +387,24 @@ const Sheets = (() => {
 
   // ── OPENING BALANCE ───────────────────────────────────────
   async function recordOpeningBalance() {
-    const fy = getCurrentFY();
-
+    const fy     = getCurrentFY();
+    const prevFY = getFYForDate(`${fy.start.split("-")[0]-1}-04`);
+    // Calculate closing balance of previous FY
+    const prevEntries = getLedgerForFY(prevFY);
+    let closing=0;
+    prevEntries.forEach(e=>{ closing += e.type==="Credit"?e.amount:-e.amount; });
     // Check if opening balance already recorded for this FY
-    const already = _ledger.find(e =>
-      e.description && e.description.includes(`Opening Balance FY ${fy.label}`)
+    const already = _ledger.find(e=>
+      e.description&&e.description.includes(`Opening Balance FY ${fy.label}`)
     );
-    if (already) {
-      if (typeof showToast === "function") showToast("Opening balance already recorded for FY "+fy.label);
-      return;
-    }
-
-    // Calculate net balance of ALL ledger entries BEFORE this FY starts
-    // e.g. for FY 2026-27 (starts Apr 2026), include everything before 2026-04-01
-    const fyStartDate = fy.start + "-01";
-    const prevEntries = _ledger.filter(e => e.date < fyStartDate);
-    let closing = 0;
-    prevEntries.forEach(e => { closing += e.type==="Credit" ? e.amount : -e.amount; });
-
-    const isFirst = prevEntries.length === 0;
-    const desc = isFirst
-      ? `Opening Balance FY ${fy.label} (system start)`
-      : `Opening Balance FY ${fy.label} (closing balance as of ${formatDateSimple(fyStartDate)})`;
-
+    if (already) { showToast&&showToast("Opening balance already recorded for this FY"); return; }
     await addLedgerEntry({
-      date:        fyStartDate,
-      type:        closing >= 0 ? "Credit" : "Debit",
-      amount:      Math.abs(closing),
-      description: desc,
-      addedBy:     "Auto (FY)",
+      date:  fy.start+"-01",
+      type:  closing>=0?"Credit":"Debit",
+      amount:Math.abs(closing),
+      description:`Opening Balance FY ${fy.label} (carried from FY ${prevFY.label})`,
+      addedBy:"Auto (FY)",
     });
-
-    if (typeof showToast === "function")
-      showToast(`✓ Opening balance ₹${Math.abs(closing)} recorded for FY ${fy.label}`);
-  }
-
-  function formatDateSimple(iso) {
-    if (!iso) return "—";
-    const [y,m,d] = iso.split("-");
-    return `${d}/${m}/${y}`;
   }
 
   // ── PURGE OLD DATA ────────────────────────────────────────

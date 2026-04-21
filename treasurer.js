@@ -60,8 +60,8 @@ function renderLedger(){
 
   // Get entries in ASCENDING order for correct running balance
   const allAsc=[...Sheets.getLedger()].sort((a,b)=>{
-    const dc=(a.date||"").localeCompare(b.date||"");
-    return dc!==0?dc:(a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||"");
+    const dc=a.date.localeCompare(b.date);
+    return dc!==0?dc:a.createdAt.localeCompare(b.createdAt);
   });
 
   // Build running balance for each entry
@@ -199,67 +199,45 @@ async function recordOpeningBalance(){
   await Sheets.recordOpeningBalance();
   await Sheets.loadAll();
   renderLedger(); renderLedgerStats();
-  // showToast is called inside Sheets.recordOpeningBalance with the amount
+  showToast("✓ Opening balance recorded");
 }
 
 // ── Annual Report ─────────────────────────────────────────────
 async function sendAnnualReport(){
   showToast("Preparing annual report…");
-  const fy = Sheets.getCurrentFY();
+  const fy      =Sheets.getCurrentFY();
+  const entries =Sheets.getLedgerForFY(fy);
+  if(!entries.length){showToast("No entries found for FY "+fy.label);return;}
 
-  // Reload fresh data first
-  if(Sheets.isConfigured()) await Sheets.loadAll();
-
-  const entries = Sheets.getLedgerForFY(fy);
-  if(!entries.length){
-    showToast(`No ledger entries found for FY ${fy.label} (Apr ${fy.start.split("-")[0]} – Mar ${fy.end.split("-")[0]})`);
-    return;
-  }
-
-  // Build Excel in chronological order
-  const headers = ["Date","Type","Description","Amount (₹)","Balance (₹)","Added By"];
+  // Build Excel rows
+  const headers=["Date","Type","Description","Amount (₹)","Balance (₹)","Added By"];
   let running=0, credit=0, debit=0;
-  const rows = [...entries]
-    .sort((a,b) => a.date.localeCompare(b.date))
-    .map(e => {
-      running += e.type==="Credit" ? e.amount : -e.amount;
-      if(e.type==="Credit") credit+=e.amount; else debit+=e.amount;
-      return [
-        formatDate(e.date), e.type, e.description, e.amount,
-        (running>=0?"₹":"−₹")+Math.abs(running).toLocaleString("en-IN"),
-        e.addedBy||""
-      ];
-    });
+  const rows=[...entries].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{
+    running+=e.type==="Credit"?e.amount:-e.amount;
+    if(e.type==="Credit")credit+=e.amount; else debit+=e.amount;
+    return[formatDate(e.date),e.type,e.description,e.amount,(running>=0?"₹":"−₹")+Math.abs(running).toLocaleString("en-IN"),e.addedBy||""];
+  });
   rows.push([]);
-  rows.push(["","","Total Credits (Rs.)",  credit,       "", ""]);
-  rows.push(["","","Total Debits (Rs.)",   debit,        "", ""]);
-  rows.push(["","","Net Balance (Rs.)",    credit-debit, "", ""]);
+  rows.push(["","","Total Credits",credit,"",""]);
+  rows.push(["","","Total Debits",debit,"",""]);
+  rows.push(["","","Net Balance",credit-debit,"",""]);
 
-  const csv = [headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const csv=[headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
 
-  // Always download for admin first
-  _downloadAnnualCSV(csv, fy);
+  // Send to all owners with email
+  const owners=Sheets.getOwners().filter(o=>!o.moveOut&&o.email);
+  if(!owners.length){showToast("No owner emails found — download only");_downloadAnnualCSV(csv,fy);return;}
 
-  // Send emails to all current owners with email addresses
-  const allOwners = Sheets.getOwners();
-  const owners = allOwners.filter(o => o.email && o.email.trim() && (!o.moveOut || o.moveOut.trim()===""));
+  // Also trigger download for admin
+  _downloadAnnualCSV(csv,fy);
 
-  if(!owners.length){
-    showToast(`📥 Report downloaded. No owner emails found — add emails in Owners tab.`);
-    return;
-  }
-
-  showToast(`Sending to ${owners.length} owner${owners.length>1?"s":""}…`);
-  let sent=0, failed=0;
+  let sent=0;
   for(const owner of owners){
-    const ok = await EmailManager.sendAnnualReport(owner, fy.label, csv);
-    if(ok) sent++; else failed++;
+    const ok=await EmailManager.sendAnnualReport(owner,fy.label,csv);
+    if(ok) sent++;
   }
-
-  if(failed===0)
-    showToast(`✓ Annual report sent to ${sent} owner${sent>1?"s":""} & downloaded`);
-  else
-    showToast(`⚠ Sent to ${sent}, failed for ${failed} — check EmailJS config`);
+  showToast(`✓ Annual report sent to ${sent} owners & downloaded`);
 }
 
 function _downloadAnnualCSV(csv,fy){
