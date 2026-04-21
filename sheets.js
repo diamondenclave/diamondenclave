@@ -88,9 +88,9 @@ const Sheets = (() => {
     }));
     // Sort: by date ASC, then createdAt ASC (insertion order for same day)
     _ledger.sort((a,b) => {
-      const dateCmp = a.date.localeCompare(b.date);
+      const dateCmp = (a.date||"").localeCompare(b.date||"");
       if (dateCmp !== 0) return dateCmp;
-      return a.createdAt.localeCompare(b.createdAt);
+      return (a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||"");
     });
   }
 
@@ -329,8 +329,8 @@ const Sheets = (() => {
     _ledger.push(opt);
     // Re-sort after adding
     _ledger.sort((a,b)=>{
-      const dc=a.date.localeCompare(b.date);
-      return dc!==0?dc:a.createdAt.localeCompare(b.createdAt);
+      const dc=(a.date||"").localeCompare(b.date||"");
+      return dc!==0?dc:(a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||"");
     });
     _saveLocal();
     if (!isConfigured()) return opt;

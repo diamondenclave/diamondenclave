@@ -60,8 +60,8 @@ function renderLedger(){
 
   // Get entries in ASCENDING order for correct running balance
   const allAsc=[...Sheets.getLedger()].sort((a,b)=>{
-    const dc=a.date.localeCompare(b.date);
-    return dc!==0?dc:a.createdAt.localeCompare(b.createdAt);
+    const dc=(a.date||"").localeCompare(b.date||"");
+    return dc!==0?dc:(a.createdAt||a.date||"").localeCompare(b.createdAt||b.date||"");
   });
 
   // Build running balance for each entry
